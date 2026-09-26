@@ -1,7 +1,14 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || process.env.DATABASE_URL;
+  let uri = process.env.MONGO_URI || process.env.MONGODB_URI || process.env.DATABASE_URL;
+
+  if (uri) {
+    uri = uri.trim();
+    if ((uri.startsWith('"') && uri.endsWith('"')) || (uri.startsWith("'") && uri.endsWith("'"))) {
+      uri = uri.slice(1, -1).trim();
+    }
+  }
 
   if (!uri) {
     console.error('FATAL ERROR: No MongoDB URI found. Please set MONGO_URI in your environment variables.');
