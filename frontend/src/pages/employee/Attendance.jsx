@@ -121,9 +121,11 @@ const Attendance = () => {
         notes: 'Photo & Location Verified Check-in',
       });
       if (res.data.success) {
+        const isAbsent = res.data.attendance?.status === 'Absent' || res.data.status === 'Absent';
+        const isHalfDay = res.data.attendance?.status === 'Half Day' || res.data.status === 'Half Day';
         setFeedback({
-          type: 'success',
-          text: `Photo & Location verified! Checked in at ${faceData?.officeName || 'authorized office'}.`,
+          type: isAbsent ? 'danger' : isHalfDay ? 'warning' : 'success',
+          text: res.data.message || `Photo & Location verified! Checked in at ${faceData?.officeName || 'authorized office'}.`,
         });
         fetchAttendanceData();
         loadOfficeLocation();

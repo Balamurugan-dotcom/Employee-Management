@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, MapPin, Save, CheckCircle, Navigation, AlertCircle } from 'lucide-react';
+import { Settings, Shield, MapPin, Save, CheckCircle, Navigation, AlertCircle, Clock } from 'lucide-react';
 import api from '../../services/api';
 import { getDeviceCoordinates } from '../../utils/locationService';
 
@@ -14,6 +14,11 @@ const AdminSettings = () => {
     officialEmail: 'contact@talentflow.internal',
     workHoursPerDay: 8,
     standardLeaveQuota: 20,
+    shiftStartTime: '09:00',
+    shiftEndTime: '18:00',
+    halfDayCutoffTime: '10:00',
+    absentCutoffTime: '14:00',
+    timezone: 'Asia/Kolkata',
     allowRemotePunch: false,
     emailAlerts: true,
     twoFactorEnforced: true,
@@ -30,11 +35,22 @@ const AdminSettings = () => {
     const fetchSettings = async () => {
       try {
         const res = await api.get('/attendance/office-location');
-        if (res.data?.success && res.data.officeLocation) {
+        if (res.data?.success) {
           setSettings((prev) => ({
             ...prev,
-            officeLocation: res.data.officeLocation,
+            companyName: res.data.companyName || prev.companyName,
+            officialEmail: res.data.officialEmail || prev.officialEmail,
+            workHoursPerDay: res.data.workHoursPerDay ?? prev.workHoursPerDay,
+            standardLeaveQuota: res.data.standardLeaveQuota ?? prev.standardLeaveQuota,
+            shiftStartTime: res.data.shiftStartTime || prev.shiftStartTime,
+            shiftEndTime: res.data.shiftEndTime || prev.shiftEndTime,
+            halfDayCutoffTime: res.data.halfDayCutoffTime || prev.halfDayCutoffTime,
+            absentCutoffTime: res.data.absentCutoffTime || prev.absentCutoffTime,
+            timezone: res.data.timezone || prev.timezone,
             allowRemotePunch: Boolean(res.data.allowRemotePunch),
+            emailAlerts: res.data.emailAlerts !== undefined ? Boolean(res.data.emailAlerts) : prev.emailAlerts,
+            twoFactorEnforced: res.data.twoFactorEnforced !== undefined ? Boolean(res.data.twoFactorEnforced) : prev.twoFactorEnforced,
+            officeLocation: res.data.officeLocation || prev.officeLocation,
           }));
         }
       } catch (e) {
@@ -71,7 +87,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSave = async (e) => {
+    const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -82,6 +98,17 @@ const AdminSettings = () => {
         radiusMeters: settings.officeLocation.radiusMeters,
         enforceLocation: settings.officeLocation.enforceLocation,
         allowRemotePunch: settings.allowRemotePunch,
+        companyName: settings.companyName,
+        officialEmail: settings.officialEmail,
+        workHoursPerDay: settings.workHoursPerDay,
+        standardLeaveQuota: settings.standardLeaveQuota,
+        shiftStartTime: settings.shiftStartTime,
+        shiftEndTime: settings.shiftEndTime,
+        halfDayCutoffTime: settings.halfDayCutoffTime,
+        absentCutoffTime: settings.absentCutoffTime,
+        timezone: settings.timezone,
+        emailAlerts: settings.emailAlerts,
+        twoFactorEnforced: settings.twoFactorEnforced,
       });
 
       // Broadcast update across windows & tabs
@@ -229,6 +256,136 @@ const AdminSettings = () => {
                   <p style={{ fontSize: '11.5px', color: '#64748b' }}>Reject attendance actions if employee is outside the radius</p>
                 </div>
               </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Shift Timings & Late Attendance Policy Rules */}
+        <div className="table-card" style={{ padding: '24px', marginBottom: '24px', borderLeft: '4px solid #f59e0b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <Clock size={22} color="#f59e0b" />
+            <div>
+              <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Shift Timings & Late Attendance Cutoff Rules</h3>
+              <p style={{ fontSize: '12.5px', color: '#64748b', margin: '2px 0 0 0' }}>
+                Automated status rules applied to employee check-ins based on check-in arrival time
+              </p>
+            </div>
+          </div>
+
+          {/* Policy Summary Banner */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '12px',
+              padding: '14px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }}></span>
+              <div>
+                <strong style={{ fontSize: '12.5px', color: '#047857' }}>On-Time Arrival</strong>
+                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Check-in ≤ {settings.halfDayCutoffTime || '10:00'} → <strong>Present</strong></p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }}></span>
+              <div>
+                <strong style={{ fontSize: '12.5px', color: '#b45309' }}>Half-Day Late Cutoff</strong>
+                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Check-in &gt; {settings.halfDayCutoffTime || '10:00'} → <strong>Half Day</strong></p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 }}></span>
+              <div>
+                <strong style={{ fontSize: '12.5px', color: '#b91c1c' }}>Full Day Absent Cutoff</strong>
+                <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Check-in ≥ {settings.absentCutoffTime || '14:00'} → <strong>Full Day Absent</strong></p>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Shift Start Time</label>
+              <input
+                type="time"
+                className="form-control"
+                value={settings.shiftStartTime || '09:00'}
+                onChange={(e) => setSettings({ ...settings, shiftStartTime: e.target.value })}
+                required
+              />
+              <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Default: 09:00 AM (scheduled work start)
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label>Shift End Time</label>
+              <input
+                type="time"
+                className="form-control"
+                value={settings.shiftEndTime || '18:00'}
+                onChange={(e) => setSettings({ ...settings, shiftEndTime: e.target.value })}
+                required
+              />
+              <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Default: 06:00 PM (scheduled work end)
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>Half-Day Check-in Cutoff</span>
+                <span className="badge badge-halfday" style={{ fontSize: '11px', padding: '1px 6px' }}>Half Day</span>
+              </label>
+              <input
+                type="time"
+                className="form-control"
+                value={settings.halfDayCutoffTime || '10:00'}
+                onChange={(e) => setSettings({ ...settings, halfDayCutoffTime: e.target.value })}
+                required
+              />
+              <span style={{ fontSize: '11.5px', color: '#d97706', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+                Check-ins after this time (10:00 AM) are automatically marked as Half Day
+              </span>
+            </div>
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>Full Day Absent Check-in Cutoff</span>
+                <span className="badge badge-absent" style={{ fontSize: '11px', padding: '1px 6px' }}>Full Day Absent</span>
+              </label>
+              <input
+                type="time"
+                className="form-control"
+                value={settings.absentCutoffTime || '14:00'}
+                onChange={(e) => setSettings({ ...settings, absentCutoffTime: e.target.value })}
+                required
+              />
+              <span style={{ fontSize: '11.5px', color: '#dc2626', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+                Check-ins at or after this time (2:00 PM) are automatically marked as Absent
+              </span>
+            </div>
+
+            <div className="form-group col-span-2">
+              <label>Operational Timezone</label>
+              <input
+                type="text"
+                className="form-control"
+                value={settings.timezone || 'Asia/Kolkata'}
+                onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+                placeholder="e.g. Asia/Kolkata, UTC, America/New_York"
+                required
+              />
+              <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Company headquarters time zone used to evaluate check-in clock timestamps
+              </span>
             </div>
           </div>
         </div>

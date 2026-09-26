@@ -4,12 +4,16 @@ const User = require('../models/User');
 const Setting = require('../models/Setting');
 
 // Helper to get today's date formatted as YYYY-MM-DD
-const getTodayDateStr = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const getTodayDateStr = (timeZone = 'Asia/Kolkata') => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || 'Asia/Kolkata' }).format(new Date());
+  } catch (e) {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 };
 
 // Haversine formula to calculate distance in meters between two lat/lng points
@@ -34,6 +38,14 @@ const getOfficeLocationSettings = async () => {
   if (!setting) {
     setting = await Setting.create({
       companyName: 'TalentFlow Enterprise Global Inc.',
+      officialEmail: 'contact@talentflow.internal',
+      workHoursPerDay: 8,
+      standardLeaveQuota: 20,
+      shiftStartTime: '09:00',
+      shiftEndTime: '18:00',
+      halfDayCutoffTime: '10:00', // Check-in after 10:00 AM is Half Day
+      absentCutoffTime: '14:00', // Check-in at or after 2:00 PM is Full Day Absent
+      timezone: 'Asia/Kolkata',
       officeLocation: {
         name: 'Main Office Headquarters',
         latitude: 12.9716,
@@ -45,6 +57,67 @@ const getOfficeLocationSettings = async () => {
     });
   }
   return setting;
+};
+
+// Evaluate attendance status based on check-in time and configured cutoff thresholds:
+// 1. Check-in on or before halfDayCutoff (10:00 AM) => 'Present'
+// 2. Check-in after halfDayCutoff (10:00 AM) and before absentCutoff (2:00 PM) => 'Half Day'
+// 3. Check-in at or after absentCutoff (2:00 PM / 14:00) => 'Absent'
+const evaluateCheckInStatus = (
+  checkInDate,
+  halfDayCutoff = '10:00',
+  absentCutoff = '14:00',
+  timezone = 'Asia/Kolkata'
+) => {
+  let hour, minute;
+  try {
+    const timeParts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone || 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(checkInDate);
+
+    hour = parseInt(timeParts.find((p) => p.type === 'hour')?.value, 10);
+    minute = parseInt(timeParts.find((p) => p.type === 'minute')?.value, 10);
+  } catch (e) {
+    hour = checkInDate.getHours();
+    minute = checkInDate.getMinutes();
+  }
+
+  const [halfH = 10, halfM = 0] = (halfDayCutoff || '10:00').split(':').map(Number);
+  const [absH = 14, absM = 0] = (absentCutoff || '14:00').split(':').map(Number);
+
+  const checkInMins = hour * 60 + minute;
+  const halfDayCutoffMins = halfH * 60 + halfM;
+  const absentCutoffMins = absH * 60 + absM;
+
+  const displayTime = checkInDate.toLocaleTimeString('en-US', {
+    timeZone: timezone || 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  if (checkInMins >= absentCutoffMins) {
+    return {
+      status: 'Absent',
+      notes: `Late Check-in at ${displayTime} (after ${absentCutoff}) — Marked Full Day Absent per company policy`,
+      message: `Checked in at ${displayTime}. Due to check-in at or after 2:00 PM (${absentCutoff}), attendance is marked as Full Day Absent.`,
+    };
+  } else if (checkInMins > halfDayCutoffMins) {
+    return {
+      status: 'Half Day',
+      notes: `Late Check-in at ${displayTime} (after ${halfDayCutoff}) — Marked Half Day per company policy`,
+      message: `Checked in at ${displayTime}. Due to check-in after 10:00 AM (${halfDayCutoff}), attendance is marked as Half Day.`,
+    };
+  } else {
+    return {
+      status: 'Present',
+      notes: `On-time Check-in at ${displayTime} — Marked Present`,
+      message: `Checked in successfully on time at ${displayTime}. Attendance marked as Present.`,
+    };
+  }
 };
 
 // Verify employee's current coordinates against the authorized office location
@@ -113,7 +186,8 @@ const verifyEmployeeLocation = async (req) => {
 // @access  Private (Employee, Manager, Admin)
 const checkIn = async (req, res) => {
   try {
-    const today = getTodayDateStr();
+    const setting = await getOfficeLocationSettings();
+    const today = getTodayDateStr(setting.timezone);
 
     // Resolve employee record
     let employee = req.employee;
@@ -155,14 +229,27 @@ const checkIn = async (req, res) => {
     const now = new Date();
     const photo = req.body.faceImage || '';
 
+    // Evaluate check-in cutoff rules (10:00 AM Half Day, 2:00 PM Full Day Absent)
+    const clientTz = req.body.timezone || setting.timezone || 'Asia/Kolkata';
+    const evalResult = evaluateCheckInStatus(
+      now,
+      setting.halfDayCutoffTime || '10:00',
+      setting.absentCutoffTime || '14:00',
+      clientTz
+    );
+
+    const checkInNotes = req.body.notes
+      ? `${req.body.notes} | ${evalResult.notes}`
+      : evalResult.notes;
+
     if (!attendance) {
       attendance = await Attendance.create({
         employee: employee._id,
         user: req.user._id,
         date: today,
         checkIn: now,
-        status: 'Present',
-        notes: req.body.notes || (photo ? 'Photo & Location Verified Check-in' : 'Normal check-in'),
+        status: evalResult.status,
+        notes: checkInNotes,
         faceVerified: req.body.faceVerified ?? false,
         faceImage: photo,
         locationVerified: true,
@@ -171,10 +258,10 @@ const checkIn = async (req, res) => {
       });
     } else {
       attendance.checkIn = now;
-      attendance.status = 'Present';
+      attendance.status = evalResult.status;
       if (req.body.faceVerified !== undefined) attendance.faceVerified = req.body.faceVerified;
       if (photo) attendance.faceImage = photo;
-      if (req.body.notes) attendance.notes = req.body.notes;
+      attendance.notes = checkInNotes;
       attendance.locationVerified = true;
       attendance.locationDistance = locationCheck.distance || 0;
       if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
@@ -203,7 +290,8 @@ const checkIn = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Check-in recorded successfully.',
+      message: evalResult.message,
+      status: evalResult.status,
       attendance,
     });
   } catch (error) {
@@ -220,7 +308,8 @@ const checkIn = async (req, res) => {
 // @access  Private
 const checkOut = async (req, res) => {
   try {
-    const today = getTodayDateStr();
+    const setting = await getOfficeLocationSettings();
+    const today = getTodayDateStr(setting.timezone);
 
     let employee = req.employee;
     if (!employee) {
@@ -276,7 +365,13 @@ const checkOut = async (req, res) => {
     const diffHours = +(diffMs / (1000 * 60 * 60)).toFixed(2);
     attendance.workingHours = diffHours;
 
-    if (diffHours < 4) {
+    // Preserve check-in penalty: If checked in after 2:00 PM (Absent) or after 10:00 AM (Half Day),
+    // do NOT overwrite back to Present upon check-out
+    if (attendance.status === 'Absent') {
+      // Kept as Absent (late arrival after 2:00 PM)
+    } else if (attendance.status === 'Half Day') {
+      // Kept as Half Day (late arrival after 10:00 AM)
+    } else if (diffHours < 4) {
       attendance.status = 'Half Day';
     } else {
       attendance.status = 'Present';
@@ -693,6 +788,17 @@ const getOfficeLocation = async (req, res) => {
       success: true,
       officeLocation: setting.officeLocation,
       allowRemotePunch: setting.allowRemotePunch,
+      companyName: setting.companyName,
+      officialEmail: setting.officialEmail,
+      workHoursPerDay: setting.workHoursPerDay,
+      standardLeaveQuota: setting.standardLeaveQuota,
+      emailAlerts: setting.emailAlerts,
+      twoFactorEnforced: setting.twoFactorEnforced,
+      shiftStartTime: setting.shiftStartTime || '09:00',
+      shiftEndTime: setting.shiftEndTime || '18:00',
+      halfDayCutoffTime: setting.halfDayCutoffTime || '10:00',
+      absentCutoffTime: setting.absentCutoffTime || '14:00',
+      timezone: setting.timezone || 'Asia/Kolkata',
     });
   } catch (error) {
     res.status(500).json({
@@ -708,7 +814,25 @@ const getOfficeLocation = async (req, res) => {
 // @access  Private (Admin)
 const updateOfficeLocation = async (req, res) => {
   try {
-    const { name, latitude, longitude, radiusMeters, enforceLocation, allowRemotePunch } = req.body;
+    const {
+      name,
+      latitude,
+      longitude,
+      radiusMeters,
+      enforceLocation,
+      allowRemotePunch,
+      companyName,
+      officialEmail,
+      workHoursPerDay,
+      standardLeaveQuota,
+      emailAlerts,
+      twoFactorEnforced,
+      shiftStartTime,
+      shiftEndTime,
+      halfDayCutoffTime,
+      absentCutoffTime,
+      timezone,
+    } = req.body;
     let setting = await getOfficeLocationSettings();
 
     if (!setting.officeLocation) {
@@ -722,19 +846,40 @@ const updateOfficeLocation = async (req, res) => {
     if (enforceLocation !== undefined) setting.officeLocation.enforceLocation = Boolean(enforceLocation);
     if (allowRemotePunch !== undefined) setting.allowRemotePunch = Boolean(allowRemotePunch);
 
+    if (companyName !== undefined) setting.companyName = companyName;
+    if (officialEmail !== undefined) setting.officialEmail = officialEmail;
+    if (workHoursPerDay !== undefined) setting.workHoursPerDay = Number(workHoursPerDay);
+    if (standardLeaveQuota !== undefined) setting.standardLeaveQuota = Number(standardLeaveQuota);
+    if (emailAlerts !== undefined) setting.emailAlerts = Boolean(emailAlerts);
+    if (twoFactorEnforced !== undefined) setting.twoFactorEnforced = Boolean(twoFactorEnforced);
+    if (shiftStartTime !== undefined) setting.shiftStartTime = shiftStartTime;
+    if (shiftEndTime !== undefined) setting.shiftEndTime = shiftEndTime;
+    if (halfDayCutoffTime !== undefined) setting.halfDayCutoffTime = halfDayCutoffTime;
+    if (absentCutoffTime !== undefined) setting.absentCutoffTime = absentCutoffTime;
+    if (timezone !== undefined) setting.timezone = timezone;
+
     setting.markModified('officeLocation');
     await setting.save();
 
     res.status(200).json({
       success: true,
-      message: 'Authorized office location updated successfully.',
+      message: 'Settings and authorized office location updated successfully.',
       officeLocation: setting.officeLocation,
       allowRemotePunch: setting.allowRemotePunch,
+      companyName: setting.companyName,
+      officialEmail: setting.officialEmail,
+      workHoursPerDay: setting.workHoursPerDay,
+      standardLeaveQuota: setting.standardLeaveQuota,
+      shiftStartTime: setting.shiftStartTime,
+      shiftEndTime: setting.shiftEndTime,
+      halfDayCutoffTime: setting.halfDayCutoffTime,
+      absentCutoffTime: setting.absentCutoffTime,
+      timezone: setting.timezone,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Failed to update office location.',
+      message: 'Failed to update office location and settings.',
       error: error.message,
     });
   }

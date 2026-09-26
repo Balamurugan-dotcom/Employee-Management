@@ -18,6 +18,26 @@ const settingSchema = new mongoose.Schema(
       type: Number,
       default: 20,
     },
+    shiftStartTime: {
+      type: String,
+      default: '09:00',
+    },
+    shiftEndTime: {
+      type: String,
+      default: '18:00',
+    },
+    halfDayCutoffTime: {
+      type: String,
+      default: '10:00', // Check-in after 10:00 AM is Half Day
+    },
+    absentCutoffTime: {
+      type: String,
+      default: '14:00', // Check-in at or after 2:00 PM (14:00) is Full Day Absent
+    },
+    timezone: {
+      type: String,
+      default: 'Asia/Kolkata',
+    },
     officeLocation: {
       name: {
         type: String,
