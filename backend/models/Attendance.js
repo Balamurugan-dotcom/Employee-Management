@@ -60,6 +60,26 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    faceVerified: {
+      type: Boolean,
+      default: false,
+    },
+    faceImage: {
+      type: String,
+      default: '',
+    },
+    locationVerified: {
+      type: Boolean,
+      default: false,
+    },
+    locationDistance: {
+      type: Number,
+      default: 0,
+    },
+    locationCoordinates: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
   },
   {
     timestamps: true,

@@ -10,11 +10,16 @@ const {
   getTodayStatus,
   getEmployeeAttendance,
   getAllAttendance,
+  getOfficeLocation,
+  updateOfficeLocation,
 } = require('../controllers/attendanceController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(protect);
+
+router.get('/office-location', getOfficeLocation);
+router.put('/office-location', authorize('admin'), updateOfficeLocation);
 
 router.post('/checkin', checkIn);
 router.post('/checkout', checkOut);

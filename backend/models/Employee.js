@@ -78,6 +78,14 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    lastCheckInPhoto: {
+      type: String,
+      default: '',
+    },
+    lastCheckInTime: {
+      type: Date,
+      default: null,
+    },
     status: {
       type: String,
       enum: ['Active', 'Inactive'],

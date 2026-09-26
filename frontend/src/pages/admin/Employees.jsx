@@ -265,7 +265,7 @@ const Employees = () => {
                 <th>Designation</th>
                 <th>Manager</th>
                 <th>Joining Date</th>
-                <th>Status</th>
+                <th>Attendance & Status</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
@@ -294,11 +294,43 @@ const Employees = () => {
                       )}
                     </td>
                     <td>
-                      <img
-                        src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                        alt=""
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={emp.profileImage || emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
+                          alt={emp.name}
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: (emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || emp.profileImage)
+                              ? '2px solid #10b981'
+                              : '1px solid #e2e8f0',
+                          }}
+                        />
+                        {(emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || emp.profileImage) && (
+                          <span
+                            title="Verified Check-In Photo"
+                            style={{
+                              position: 'absolute',
+                              bottom: '-2px',
+                              right: '-2px',
+                              background: '#10b981',
+                              color: '#fff',
+                              borderRadius: '50%',
+                              width: '14px',
+                              height: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '8px',
+                              border: '1.5px solid #fff',
+                            }}
+                          >
+                            ✓
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ fontWeight: 600 }}>{emp.name}</td>
                     <td style={{ color: '#475569' }}>{emp.email}</td>
@@ -311,13 +343,97 @@ const Employees = () => {
                     <td>{emp.manager?.name || emp.managerName || 'None'}</td>
                     <td>{new Date(emp.joiningDate).toLocaleDateString()}</td>
                     <td>
+                      {/* Live Today's Duty / Attendance Punch Status */}
+                      <div style={{ marginBottom: '4px' }}>
+                        {emp.dutyStatus === 'Checked Out' ? (
+                          <span
+                            style={{
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              fontWeight: 600,
+                              fontSize: '11.5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            🏁 Checked Out
+                            {emp.todayAttendance?.checkOut && (
+                              <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
+                                ({new Date(emp.todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                              </span>
+                            )}
+                          </span>
+                        ) : emp.dutyStatus === 'Checked In' ? (
+                          <span
+                            style={{
+                              background: '#ecfdf5',
+                              color: '#047857',
+                              border: '1px solid #a7f3d0',
+                              fontWeight: 600,
+                              fontSize: '11.5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            🟢 Checked In
+                            {emp.todayAttendance?.checkIn && (
+                              <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
+                                ({new Date(emp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                              </span>
+                            )}
+                          </span>
+                        ) : emp.dutyStatus === 'On Break' ? (
+                          <span
+                            style={{
+                              background: '#fffbeb',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
+                              fontWeight: 600,
+                              fontSize: '11.5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            ☕ On Break
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              background: '#f8fafc',
+                              color: '#64748b',
+                              border: '1px solid #e2e8f0',
+                              fontWeight: 500,
+                              fontSize: '11.5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            ⚪ Not In Yet
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Employment Account Status */}
                       <span
                         className={`badge badge-${emp.status?.toLowerCase()}`}
-                        style={{ cursor: 'pointer' }}
-                        title="Click to toggle status"
+                        style={{ cursor: 'pointer', fontSize: '10.5px', padding: '2px 6px' }}
+                        title="Click to toggle account status (Active / Inactive)"
                         onClick={() => handleToggleStatus(emp)}
                       >
-                        {emp.status}
+                        Account: {emp.status}
                       </span>
                     </td>
                     <td>
@@ -641,20 +757,136 @@ const Employees = () => {
               </button>
             </div>
             <div className="modal-body">
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <img
-                  src={selectedEmp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedEmp.name}`}
-                  alt=""
-                  style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #4f46e5' }}
-                />
-                <h3 style={{ marginTop: '10px' }}>{selectedEmp.name}</h3>
-                <p style={{ color: '#64748b', fontSize: '13px' }}>
-                  {selectedEmp.designation} • {selectedEmp.department}
-                </p>
-                <span className={`badge badge-${selectedEmp.status?.toLowerCase()}`} style={{ marginTop: '8px' }}>
-                  {selectedEmp.status}
-                </span>
-              </div>
+              {(() => {
+                const checkInPhoto = selectedEmp.todayAttendance?.faceImage || selectedEmp.lastCheckInPhoto || selectedEmp.profileImage;
+                return (
+                  <>
+                    <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={checkInPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedEmp.name}`}
+                          alt={selectedEmp.name}
+                          style={{
+                            width: '88px',
+                            height: '88px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: checkInPhoto ? '3.5px solid #10b981' : '3px solid #4f46e5',
+                            boxShadow: checkInPhoto ? '0 0 16px rgba(16, 185, 129, 0.35)' : 'none',
+                          }}
+                        />
+                        {checkInPhoto && (
+                          <span
+                            title="Verified Check-In Photo"
+                            style={{
+                              position: 'absolute',
+                              bottom: '2px',
+                              right: '2px',
+                              background: '#10b981',
+                              color: '#fff',
+                              borderRadius: '50%',
+                              width: '22px',
+                              height: '22px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              border: '2px solid #fff',
+                            }}
+                          >
+                            📷
+                          </span>
+                        )}
+                      </div>
+                      <h3 style={{ marginTop: '10px', marginBottom: '2px' }}>{selectedEmp.name}</h3>
+                      <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
+                        {selectedEmp.designation} • {selectedEmp.department}
+                      </p>
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span className={`badge badge-${selectedEmp.status?.toLowerCase()}`}>
+                          Account: {selectedEmp.status}
+                        </span>
+                        {selectedEmp.todayAttendance ? (
+                          <span
+                            style={{
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              background: selectedEmp.dutyStatus === 'Checked Out' ? '#eff6ff' : '#ecfdf5',
+                              color: selectedEmp.dutyStatus === 'Checked Out' ? '#1d4ed8' : '#047857',
+                              border: `1px solid ${selectedEmp.dutyStatus === 'Checked Out' ? '#bfdbfe' : '#a7f3d0'}`,
+                            }}
+                          >
+                            {selectedEmp.dutyStatus === 'Checked Out'
+                              ? `🏁 Checked Out (${new Date(selectedEmp.todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                              : `🟢 Checked In (${new Date(selectedEmp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '11.5px',
+                              color: '#64748b',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            ⚪ Not Checked In Today
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dedicated Check-In Photo Card */}
+                    {checkInPhoto && (
+                      <div
+                        style={{
+                          marginBottom: '18px',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '14px',
+                        }}
+                      >
+                        <img
+                          src={checkInPhoto}
+                          alt="Check-in Photo"
+                          style={{
+                            width: '58px',
+                            height: '58px',
+                            borderRadius: '10px',
+                            objectFit: 'cover',
+                            border: '2px solid #10b981',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
+                              📸 Check-In Captured Photo
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#166534', fontWeight: 600 }}>
+                            {selectedEmp.todayAttendance?.checkIn
+                              ? `Captured today at ${new Date(selectedEmp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                              : selectedEmp.lastCheckInTime
+                              ? `Captured on ${new Date(selectedEmp.lastCheckInTime).toLocaleString()}`
+                              : 'Live Camera Capture Recorded'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#15803d' }}>
+                            Verified employee camera capture during attendance check-in.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', fontSize: '13.5px' }}>
                 <div>

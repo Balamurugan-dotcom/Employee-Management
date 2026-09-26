@@ -14,15 +14,27 @@ import {
   Utensils,
   Bell,
   ArrowRight,
+  X,
+  MapPin,
+  RefreshCw,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import FaceVerificationModal from '../../components/FaceVerificationModal';
+import { verifyAttendanceLocation } from '../../utils/locationService';
 
 const EmployeeDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [punchLoading, setPunchLoading] = useState(false);
   const [punchMessage, setPunchMessage] = useState({ type: '', text: '' });
+  const [faceModalOpen, setFaceModalOpen] = useState(false);
+  const [verifiedLocation, setVerifiedLocation] = useState(null);
+  const [officeInfo, setOfficeInfo] = useState(null);
+  const [userDistance, setUserDistance] = useState(null);
+  const [checkingOfficeLoc, setCheckingOfficeLoc] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -38,18 +50,63 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const loadOfficeLocation = async () => {
+    setCheckingOfficeLoc(true);
+    try {
+      const locCheck = await verifyAttendanceLocation();
+      setOfficeInfo(locCheck.officeLocation || { name: locCheck.officeName, radiusMeters: locCheck.allowedRadius });
+      if (locCheck.distance !== undefined) {
+        setUserDistance(locCheck.distance);
+      }
+      setVerifiedLocation(locCheck);
+    } catch (err) {
+      console.warn('Failed to load workplace location:', err);
+    } finally {
+      setCheckingOfficeLoc(false);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    loadOfficeLocation();
+
+    const handleLocationUpdate = () => {
+      loadOfficeLocation();
+    };
+
+    window.addEventListener('office-location-updated', handleLocationUpdate);
+    window.addEventListener('storage', handleLocationUpdate);
+    return () => {
+      window.removeEventListener('office-location-updated', handleLocationUpdate);
+      window.removeEventListener('storage', handleLocationUpdate);
+    };
   }, []);
 
-  const handleCheckIn = async () => {
+  const handleOpenFaceModal = () => {
+    setPunchMessage({ type: '', text: '' });
+    setFaceModalOpen(true);
+  };
+
+  const handleFaceCheckInSuccess = async (faceData) => {
+    setFaceModalOpen(false);
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/checkin', { notes: 'Dashboard quick check-in' });
+      const res = await api.post('/attendance/checkin', {
+        notes: 'Photo & Location Verified Check-in',
+        faceVerified: true,
+        faceImage: faceData?.faceImage || '',
+        latitude: faceData?.latitude,
+        longitude: faceData?.longitude,
+        distance: faceData?.distance,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Checked in successfully! Have a productive day.' });
+        setPunchMessage({
+          type: 'success',
+          text: `Photo & Location verified! Checked in at ${faceData?.officeName || 'authorized office'}. Have a productive day.`,
+        });
         fetchDashboardData();
+        loadOfficeLocation();
       }
     } catch (err) {
       setPunchMessage({
@@ -65,15 +122,23 @@ const EmployeeDashboard = () => {
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/checkout');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setPunchMessage({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/checkout', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Checked out successfully! Shift logged.' });
+        setPunchMessage({ type: 'success', text: `Checked out successfully within ${locCheck.officeName}. Shift logged.` });
         fetchDashboardData();
       }
     } catch (err) {
       setPunchMessage({
         type: 'danger',
-        text: err.response?.data?.message || 'Check-out failed.',
+        text: err.response?.data?.message || err.message || 'Check-out failed.',
       });
     } finally {
       setPunchLoading(false);
@@ -84,15 +149,23 @@ const EmployeeDashboard = () => {
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/break-in');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setPunchMessage({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/break-in', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Break In recorded! Enjoy your break.' });
+        setPunchMessage({ type: 'success', text: `Break In recorded at ${locCheck.officeName}! Enjoy your break.` });
         fetchDashboardData();
       }
     } catch (err) {
       setPunchMessage({
         type: 'danger',
-        text: err.response?.data?.message || 'Break In failed.',
+        text: err.response?.data?.message || err.message || 'Break In failed.',
       });
     } finally {
       setPunchLoading(false);
@@ -103,15 +176,23 @@ const EmployeeDashboard = () => {
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/break-end');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setPunchMessage({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/break-end', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Break End recorded! Welcome back.' });
+        setPunchMessage({ type: 'success', text: `Break End recorded at ${locCheck.officeName}! Welcome back.` });
         fetchDashboardData();
       }
     } catch (err) {
       setPunchMessage({
         type: 'danger',
-        text: err.response?.data?.message || 'Break End failed.',
+        text: err.response?.data?.message || err.message || 'Break End failed.',
       });
     } finally {
       setPunchLoading(false);
@@ -122,15 +203,23 @@ const EmployeeDashboard = () => {
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/lunch-in');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setPunchMessage({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/lunch-in', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Lunch In recorded! Enjoy your meal.' });
+        setPunchMessage({ type: 'success', text: `Lunch In recorded at ${locCheck.officeName}! Enjoy your meal.` });
         fetchDashboardData();
       }
     } catch (err) {
       setPunchMessage({
         type: 'danger',
-        text: err.response?.data?.message || 'Lunch In failed.',
+        text: err.response?.data?.message || err.message || 'Lunch In failed.',
       });
     } finally {
       setPunchLoading(false);
@@ -141,15 +230,23 @@ const EmployeeDashboard = () => {
     setPunchLoading(true);
     setPunchMessage({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/lunch-end');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setPunchMessage({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/lunch-end', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setPunchMessage({ type: 'success', text: 'Lunch End recorded! Welcome back.' });
+        setPunchMessage({ type: 'success', text: `Lunch End recorded at ${locCheck.officeName}! Welcome back.` });
         fetchDashboardData();
       }
     } catch (err) {
       setPunchMessage({
         type: 'danger',
-        text: err.response?.data?.message || 'Lunch End failed.',
+        text: err.response?.data?.message || err.message || 'Lunch End failed.',
       });
     } finally {
       setPunchLoading(false);
@@ -173,6 +270,32 @@ const EmployeeDashboard = () => {
 
   return (
     <div>
+      {/* Alert Notification Banner */}
+      {punchMessage.text && (
+        <div
+          className={`alert alert-${punchMessage.type}`}
+          style={{
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {punchMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>{punchMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPunchMessage({ type: '', text: '' })}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '4px' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Interactive Daily Punch Banner */}
       <div
         className="table-card"
@@ -224,7 +347,7 @@ const EmployeeDashboard = () => {
             <button
               className="btn btn-success"
               style={{ padding: '12px 24px', fontSize: '15px', fontWeight: 700, boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)' }}
-              onClick={handleCheckIn}
+              onClick={handleOpenFaceModal}
               disabled={punchLoading}
             >
               <LogIn size={18} />
@@ -483,6 +606,15 @@ const EmployeeDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Biometric Face Verification Camera Modal */}
+      <FaceVerificationModal
+        isOpen={faceModalOpen}
+        onClose={() => setFaceModalOpen(false)}
+        onSuccess={handleFaceCheckInSuccess}
+        employeeName={user?.name}
+        employeePhoto={user?.avatar}
+      />
     </div>
   );
 };

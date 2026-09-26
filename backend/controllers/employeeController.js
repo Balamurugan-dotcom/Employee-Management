@@ -1,6 +1,7 @@
 const Employee = require('../models/Employee');
 const User = require('../models/User');
 const Department = require('../models/Department');
+const Attendance = require('../models/Attendance');
 const bcrypt = require('bcryptjs');
 
 // @desc    Get all employees (Admin can see all, Manager can see their team or all depending on query)
@@ -52,10 +53,51 @@ const getEmployees = async (req, res) => {
       .populate('user', 'role status')
       .sort({ createdAt: -1 });
 
+    // Fetch today's attendance to reflect real-time live duty / shift status (Checked In, Checked Out, On Break, Not Checked In)
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
+    const todayAttendances = await Attendance.find({
+      date: today,
+      employee: { $in: employees.map((e) => e._id) },
+    });
+
+    const attendanceMap = {};
+    todayAttendances.forEach((att) => {
+      let dutyStatus = 'Not Checked In';
+      if (att.checkOut) {
+        dutyStatus = 'Checked Out';
+      } else if (att.isOnBreak) {
+        dutyStatus = 'On Break';
+      } else if (att.isOnLunch) {
+        dutyStatus = 'On Lunch';
+      } else if (att.checkIn) {
+        dutyStatus = 'Checked In';
+      }
+
+      attendanceMap[att.employee.toString()] = {
+        dutyStatus,
+        checkIn: att.checkIn,
+        checkOut: att.checkOut,
+        workingHours: att.workingHours,
+        status: att.status,
+        faceImage: att.faceImage || '',
+      };
+    });
+
+    const enrichedEmployees = employees.map((emp) => {
+      const att = attendanceMap[emp._id.toString()];
+      return {
+        ...emp.toObject(),
+        todayAttendance: att || null,
+        dutyStatus: att ? att.dutyStatus : 'Not Checked In',
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: employees.length,
-      employees,
+      count: enrichedEmployees.length,
+      employees: enrichedEmployees,
     });
   } catch (error) {
     res.status(500).json({
@@ -107,9 +149,16 @@ const getEmployeeById = async (req, res) => {
       });
     }
 
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const todayAtt = await Attendance.findOne({ employee: employee._id, date: today });
+
     res.status(200).json({
       success: true,
-      employee,
+      employee: {
+        ...employee.toObject(),
+        todayAttendance: todayAtt || null,
+      },
     });
   } catch (error) {
     res.status(500).json({

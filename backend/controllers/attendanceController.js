@@ -1,5 +1,7 @@
 const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
+const User = require('../models/User');
+const Setting = require('../models/Setting');
 
 // Helper to get today's date formatted as YYYY-MM-DD
 const getTodayDateStr = () => {
@@ -8,6 +10,102 @@ const getTodayDateStr = () => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+// Haversine formula to calculate distance in meters between two lat/lng points
+const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+};
+
+// Retrieve or initialize company authorized office location settings
+const getOfficeLocationSettings = async () => {
+  let setting = await Setting.findOne();
+  if (!setting) {
+    setting = await Setting.create({
+      companyName: 'TalentFlow Enterprise Global Inc.',
+      officeLocation: {
+        name: 'Main Office Headquarters',
+        latitude: 12.9716,
+        longitude: 77.5946,
+        radiusMeters: 500,
+        enforceLocation: true,
+      },
+      allowRemotePunch: false,
+    });
+  }
+  return setting;
+};
+
+// Verify employee's current coordinates against the authorized office location
+const verifyEmployeeLocation = async (req) => {
+  const setting = await getOfficeLocationSettings();
+  const office = setting.officeLocation || {
+    name: 'Main Office Headquarters',
+    latitude: 12.9716,
+    longitude: 77.5946,
+    radiusMeters: 500,
+    enforceLocation: true,
+  };
+
+  // If remote punch is allowed by policy or geofencing disabled
+  if (setting.allowRemotePunch || office.enforceLocation === false) {
+    return {
+      allowed: true,
+      distance: 0,
+      office,
+      isBypassed: true,
+    };
+  }
+
+  const { latitude, longitude } = req.body;
+  if (latitude === undefined || longitude === undefined || latitude === null || longitude === null) {
+    return {
+      allowed: false,
+      message: 'Location verification required: GPS coordinates must be provided to confirm you are at the authorized workplace.',
+      office,
+    };
+  }
+
+  const userLat = Number(latitude);
+  const userLon = Number(longitude);
+  if (isNaN(userLat) || isNaN(userLon)) {
+    return {
+      allowed: false,
+      message: 'Invalid GPS coordinates received.',
+      office,
+    };
+  }
+
+  const distance = calculateDistanceMeters(userLat, userLon, office.latitude, office.longitude);
+  const allowedRadius = office.radiusMeters || 500;
+
+  if (distance > allowedRadius) {
+    return {
+      allowed: false,
+      message: `Location Unauthorized: You are ${distance}m away from the authorized office location (${office.name}). Attendance actions are only allowed within ${allowedRadius}m.`,
+      distance,
+      allowedRadius,
+      office,
+    };
+  }
+
+  return {
+    allowed: true,
+    distance,
+    coordinates: { latitude: userLat, longitude: userLon },
+    office,
+  };
 };
 
 // @desc    Employee Check-in
@@ -42,7 +140,20 @@ const checkIn = async (req, res) => {
       });
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     const now = new Date();
+    const photo = req.body.faceImage || '';
 
     if (!attendance) {
       attendance = await Attendance.create({
@@ -51,12 +162,43 @@ const checkIn = async (req, res) => {
         date: today,
         checkIn: now,
         status: 'Present',
-        notes: req.body.notes || 'Normal check-in',
+        notes: req.body.notes || (photo ? 'Photo & Location Verified Check-in' : 'Normal check-in'),
+        faceVerified: req.body.faceVerified ?? false,
+        faceImage: photo,
+        locationVerified: true,
+        locationDistance: locationCheck.distance || 0,
+        locationCoordinates: locationCheck.coordinates || undefined,
       });
     } else {
       attendance.checkIn = now;
       attendance.status = 'Present';
+      if (req.body.faceVerified !== undefined) attendance.faceVerified = req.body.faceVerified;
+      if (photo) attendance.faceImage = photo;
+      if (req.body.notes) attendance.notes = req.body.notes;
+      attendance.locationVerified = true;
+      attendance.locationDistance = locationCheck.distance || 0;
+      if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
       await attendance.save();
+    }
+
+    // Update Employee profile photo and last check-in photo so Admin Employee Profile displays it
+    if (photo) {
+      try {
+        await Employee.findByIdAndUpdate(employee._id, {
+          profileImage: photo,
+          lastCheckInPhoto: photo,
+          lastCheckInTime: now,
+        });
+
+        const targetUserId = employee.user || req.user?._id;
+        if (targetUserId) {
+          await User.findByIdAndUpdate(targetUserId, {
+            avatar: photo,
+          });
+        }
+      } catch (photoUpdateErr) {
+        console.warn('Failed to update employee/user avatar with check-in photo:', photoUpdateErr);
+      }
     }
 
     res.status(200).json({
@@ -111,8 +253,23 @@ const checkOut = async (req, res) => {
       });
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     const now = new Date();
     attendance.checkOut = now;
+    attendance.locationVerified = true;
+    if (locationCheck.distance !== undefined) attendance.locationDistance = locationCheck.distance;
+    if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
 
     // Calculate working hours
     const diffMs = now - new Date(attendance.checkIn);
@@ -326,8 +483,23 @@ const breakIn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please end your lunch before starting another break.' });
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     attendance.breakIn = new Date();
     attendance.isOnBreak = true;
+    attendance.locationVerified = true;
+    if (locationCheck.distance !== undefined) attendance.locationDistance = locationCheck.distance;
+    if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
     await attendance.save();
 
     res.status(200).json({
@@ -362,8 +534,23 @@ const breakEnd = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No active check-in record found.' });
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     attendance.breakEnd = new Date();
     attendance.isOnBreak = false;
+    attendance.locationVerified = true;
+    if (locationCheck.distance !== undefined) attendance.locationDistance = locationCheck.distance;
+    if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
     await attendance.save();
 
     res.status(200).json({
@@ -411,8 +598,23 @@ const lunchIn = async (req, res) => {
       attendance.breakEnd = new Date();
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     attendance.lunchIn = new Date();
     attendance.isOnLunch = true;
+    attendance.locationVerified = true;
+    if (locationCheck.distance !== undefined) attendance.locationDistance = locationCheck.distance;
+    if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
     await attendance.save();
 
     res.status(200).json({
@@ -447,8 +649,23 @@ const lunchEnd = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No active check-in record found.' });
     }
 
+    // Verify authorized location
+    const locationCheck = await verifyEmployeeLocation(req);
+    if (!locationCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: locationCheck.message,
+        distance: locationCheck.distance,
+        allowedRadius: locationCheck.allowedRadius,
+        officeLocation: locationCheck.office,
+      });
+    }
+
     attendance.lunchEnd = new Date();
     attendance.isOnLunch = false;
+    attendance.locationVerified = true;
+    if (locationCheck.distance !== undefined) attendance.locationDistance = locationCheck.distance;
+    if (locationCheck.coordinates) attendance.locationCoordinates = locationCheck.coordinates;
     await attendance.save();
 
     res.status(200).json({
@@ -458,6 +675,68 @@ const lunchEnd = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to record Lunch End.', error: error.message });
+  }
+};
+
+// @desc    Get authorized office location and geofence parameters
+// @route   GET /api/attendance/office-location
+// @access  Private
+const getOfficeLocation = async (req, res) => {
+  try {
+    const setting = await getOfficeLocationSettings();
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
+    res.status(200).json({
+      success: true,
+      officeLocation: setting.officeLocation,
+      allowRemotePunch: setting.allowRemotePunch,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve office location.',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update authorized office location and geofence parameters (Admin only)
+// @route   PUT /api/attendance/office-location
+// @access  Private (Admin)
+const updateOfficeLocation = async (req, res) => {
+  try {
+    const { name, latitude, longitude, radiusMeters, enforceLocation, allowRemotePunch } = req.body;
+    let setting = await getOfficeLocationSettings();
+
+    if (!setting.officeLocation) {
+      setting.officeLocation = {};
+    }
+
+    if (name) setting.officeLocation.name = name;
+    if (latitude !== undefined) setting.officeLocation.latitude = Number(latitude);
+    if (longitude !== undefined) setting.officeLocation.longitude = Number(longitude);
+    if (radiusMeters !== undefined) setting.officeLocation.radiusMeters = Number(radiusMeters);
+    if (enforceLocation !== undefined) setting.officeLocation.enforceLocation = Boolean(enforceLocation);
+    if (allowRemotePunch !== undefined) setting.allowRemotePunch = Boolean(allowRemotePunch);
+
+    setting.markModified('officeLocation');
+    await setting.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Authorized office location updated successfully.',
+      officeLocation: setting.officeLocation,
+      allowRemotePunch: setting.allowRemotePunch,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update office location.',
+      error: error.message,
+    });
   }
 };
 
@@ -471,4 +750,6 @@ module.exports = {
   getTodayStatus,
   getEmployeeAttendance,
   getAllAttendance,
+  getOfficeLocation,
+  updateOfficeLocation,
 };

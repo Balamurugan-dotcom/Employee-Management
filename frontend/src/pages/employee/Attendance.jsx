@@ -14,9 +14,12 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
-  Sparkles,
-  TrendingUp,
+  X,
+  MapPin,
+  RefreshCw,
 } from 'lucide-react';
+import FaceVerificationModal from '../../components/FaceVerificationModal';
+import { verifyAttendanceLocation } from '../../utils/locationService';
 
 const Attendance = () => {
   const { user } = useAuth();
@@ -31,6 +34,11 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [faceModalOpen, setFaceModalOpen] = useState(false);
+  const [verifiedLocation, setVerifiedLocation] = useState(null);
+  const [officeInfo, setOfficeInfo] = useState(null);
+  const [userDistance, setUserDistance] = useState(null);
+  const [checkingOfficeLoc, setCheckingOfficeLoc] = useState(false);
 
   const fetchAttendanceData = async (monthToFetch = selectedMonth) => {
     try {
@@ -60,20 +68,65 @@ const Attendance = () => {
     }
   };
 
+  const loadOfficeLocation = async () => {
+    setCheckingOfficeLoc(true);
+    try {
+      const locCheck = await verifyAttendanceLocation();
+      setOfficeInfo(locCheck.officeLocation || { name: locCheck.officeName, radiusMeters: locCheck.allowedRadius });
+      if (locCheck.distance !== undefined) {
+        setUserDistance(locCheck.distance);
+      }
+      setVerifiedLocation(locCheck);
+    } catch (err) {
+      console.warn('Failed to load workplace location:', err);
+    } finally {
+      setCheckingOfficeLoc(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchAttendanceData(selectedMonth);
     }
+    loadOfficeLocation();
+
+    const handleLocationUpdate = () => {
+      loadOfficeLocation();
+    };
+
+    window.addEventListener('office-location-updated', handleLocationUpdate);
+    window.addEventListener('storage', handleLocationUpdate);
+    return () => {
+      window.removeEventListener('office-location-updated', handleLocationUpdate);
+      window.removeEventListener('storage', handleLocationUpdate);
+    };
   }, [user, selectedMonth]);
 
-  const handleCheckIn = async () => {
+  const handleOpenFaceModal = () => {
+    setFeedback({ type: '', text: '' });
+    setFaceModalOpen(true);
+  };
+
+  const handleFaceCheckInSuccess = async (faceData) => {
+    setFaceModalOpen(false);
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/checkin');
+      const res = await api.post('/attendance/checkin', {
+        faceVerified: true,
+        faceImage: faceData?.faceImage || '',
+        latitude: faceData?.latitude,
+        longitude: faceData?.longitude,
+        distance: faceData?.distance,
+        notes: 'Photo & Location Verified Check-in',
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Clock-in registered successfully.' });
+        setFeedback({
+          type: 'success',
+          text: `Photo & Location verified! Checked in at ${faceData?.officeName || 'authorized office'}.`,
+        });
         fetchAttendanceData();
+        loadOfficeLocation();
       }
     } catch (err) {
       setFeedback({ type: 'danger', text: err.response?.data?.message || 'Check-in failed.' });
@@ -86,13 +139,21 @@ const Attendance = () => {
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/checkout');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setFeedback({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/checkout', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Clock-out registered successfully.' });
+        setFeedback({ type: 'success', text: `Clock-out registered successfully within ${locCheck.officeName}.` });
         fetchAttendanceData();
       }
     } catch (err) {
-      setFeedback({ type: 'danger', text: err.response?.data?.message || 'Check-out failed.' });
+      setFeedback({ type: 'danger', text: err.response?.data?.message || err.message || 'Check-out failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -102,13 +163,21 @@ const Attendance = () => {
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/break-in');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setFeedback({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/break-in', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Break In recorded successfully.' });
+        setFeedback({ type: 'success', text: `Break In recorded at ${locCheck.officeName}.` });
         fetchAttendanceData();
       }
     } catch (err) {
-      setFeedback({ type: 'danger', text: err.response?.data?.message || 'Break In failed.' });
+      setFeedback({ type: 'danger', text: err.response?.data?.message || err.message || 'Break In failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -118,13 +187,21 @@ const Attendance = () => {
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/break-end');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setFeedback({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/break-end', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Break End recorded. Welcome back!' });
+        setFeedback({ type: 'success', text: `Break End recorded at ${locCheck.officeName}. Welcome back!` });
         fetchAttendanceData();
       }
     } catch (err) {
-      setFeedback({ type: 'danger', text: err.response?.data?.message || 'Break End failed.' });
+      setFeedback({ type: 'danger', text: err.response?.data?.message || err.message || 'Break End failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -134,13 +211,21 @@ const Attendance = () => {
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/lunch-in');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setFeedback({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/lunch-in', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Lunch In recorded. Enjoy your meal!' });
+        setFeedback({ type: 'success', text: `Lunch In recorded at ${locCheck.officeName}. Enjoy your meal!` });
         fetchAttendanceData();
       }
     } catch (err) {
-      setFeedback({ type: 'danger', text: err.response?.data?.message || 'Lunch In failed.' });
+      setFeedback({ type: 'danger', text: err.response?.data?.message || err.message || 'Lunch In failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -150,13 +235,21 @@ const Attendance = () => {
     setActionLoading(true);
     setFeedback({ type: '', text: '' });
     try {
-      const res = await api.post('/attendance/lunch-end');
+      const locCheck = await verifyAttendanceLocation();
+      if (!locCheck.success) {
+        setFeedback({ type: 'danger', text: locCheck.message });
+        return;
+      }
+      const res = await api.post('/attendance/lunch-end', {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
+      });
       if (res.data.success) {
-        setFeedback({ type: 'success', text: 'Lunch End recorded. Welcome back!' });
+        setFeedback({ type: 'success', text: `Lunch End recorded at ${locCheck.officeName}. Welcome back!` });
         fetchAttendanceData();
       }
     } catch (err) {
-      setFeedback({ type: 'danger', text: err.response?.data?.message || 'Lunch End failed.' });
+      setFeedback({ type: 'danger', text: err.response?.data?.message || err.message || 'Lunch End failed.' });
     } finally {
       setActionLoading(false);
     }
@@ -239,6 +332,31 @@ const Attendance = () => {
 
   return (
     <div>
+      {/* Alert Feedback Banner */}
+      {feedback.text && (
+        <div
+          className={`alert alert-${feedback.type}`}
+          style={{
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>{feedback.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback({ type: '', text: '' })}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: '4px' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Daily Clock Action Card */}
       <div className="table-card" style={{ padding: '24px 28px', marginBottom: '24px' }}>
@@ -291,7 +409,7 @@ const Attendance = () => {
             {!hasCheckedIn ? (
               <button
                 className="btn btn-success"
-                onClick={handleCheckIn}
+                onClick={handleOpenFaceModal}
                 disabled={actionLoading}
                 style={{ padding: '10px 22px', fontWeight: 600 }}
               >
@@ -890,6 +1008,15 @@ const Attendance = () => {
           </div>
         )}
       </div>
+
+      {/* Biometric Face Verification Camera Modal */}
+      <FaceVerificationModal
+        isOpen={faceModalOpen}
+        onClose={() => setFaceModalOpen(false)}
+        onSuccess={handleFaceCheckInSuccess}
+        employeeName={user?.name}
+        employeePhoto={user?.avatar}
+      />
     </div>
   );
 };

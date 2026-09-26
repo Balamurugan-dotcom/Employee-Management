@@ -20,6 +20,7 @@ import {
   Bell,
   Briefcase,
   X,
+  FileText,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -68,6 +69,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { title: 'Projects', path: '/employee/projects', icon: Briefcase },
     { title: 'Payslips', path: '/employee/payslips', icon: CreditCard },
     { title: 'Notifications', path: '/employee/notifications', icon: Bell },
+    { title: 'Daily Reports', path: '/employee/reports', icon: FileText },
   ];
 
   const currentNav = role === 'admin' ? adminNav : role === 'manager' ? managerNav : employeeNav;

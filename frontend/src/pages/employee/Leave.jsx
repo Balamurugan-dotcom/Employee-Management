@@ -66,18 +66,18 @@ const Leave = () => {
       )}
 
       {/* Quota Banner */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="table-card" style={{ padding: '20px', borderLeft: '4px solid #4f46e5' }}>
-          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>TOTAL ALLOTTED</span>
-          <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px' }}>20 Days</div>
+      <div className="leave-quota-grid">
+        <div className="leave-quota-card quota-allotted">
+          <span className="quota-label">TOTAL ALLOTTED</span>
+          <div className="quota-value">20 Days</div>
         </div>
-        <div className="table-card" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
-          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>LEAVES CONSUMED</span>
-          <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px' }}>{approvedLeaves} Days</div>
+        <div className="leave-quota-card quota-consumed">
+          <span className="quota-label">LEAVES CONSUMED</span>
+          <div className="quota-value">{approvedLeaves} Days</div>
         </div>
-        <div className="table-card" style={{ padding: '20px', borderLeft: '4px solid #0ea5e9' }}>
-          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>REMAINING BALANCE</span>
-          <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px' }}>{remainingDays} Days</div>
+        <div className="leave-quota-card quota-remaining">
+          <span className="quota-label">REMAINING BALANCE</span>
+          <div className="quota-value">{remainingDays} Days</div>
         </div>
       </div>
 

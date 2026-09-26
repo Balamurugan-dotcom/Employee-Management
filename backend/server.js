@@ -29,6 +29,7 @@ app.use('/api/departments', require('./routes/departmentRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -40,6 +40,7 @@ import MyProfile from './pages/employee/MyProfile';
 import EmployeeProjects from './pages/employee/EmployeeProjects';
 import EmployeePayslips from './pages/employee/EmployeePayslips';
 import EmployeeNotifications from './pages/employee/EmployeeNotifications';
+import EmployeeReports from './pages/employee/EmployeeReports';
 
 // Root redirector based on user role
 const RootRedirect = () => {
@@ -108,6 +109,7 @@ function App() {
               <Route path="/employee/projects" element={<EmployeeProjects />} />
               <Route path="/employee/payslips" element={<EmployeePayslips />} />
               <Route path="/employee/notifications" element={<EmployeeNotifications />} />
+              <Route path="/employee/reports" element={<EmployeeReports />} />
             </Route>
           </Route>
 

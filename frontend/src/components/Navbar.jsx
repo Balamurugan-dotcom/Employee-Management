@@ -163,55 +163,57 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
           <span>Cloud Active</span>
         </div>
 
-        {/* Notifications Dropdown */}
-        <div className="notif-wrapper" ref={notifRef}>
-          <button
-            type="button"
-            className="notif-btn"
-            onClick={() => setShowNotifications(!showNotifications)}
-            title="Notifications"
-          >
-            <Bell size={18} />
-            <span className="notif-badge">3</span>
-          </button>
+        {/* Notifications Dropdown (Hidden only in Employee Portal) */}
+        {!(user?.role === 'employee' || title === 'Employee Portal') && (
+          <div className="notif-wrapper" ref={notifRef}>
+            <button
+              type="button"
+              className="notif-btn"
+              onClick={() => setShowNotifications(!showNotifications)}
+              title="Notifications"
+            >
+              <Bell size={18} />
+              <span className="notif-badge">3</span>
+            </button>
 
-          {showNotifications && (
-            <div className="notif-dropdown">
-              <div className="notif-dropdown-header">
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700 }}>Notifications</h4>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>3 new workforce alerts</span>
-                </div>
-                <button
-                  type="button"
-                  style={{ background: 'transparent', border: 'none', color: '#4f46e5', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => setShowNotifications(false)}
-                >
-                  Mark all read
-                </button>
-              </div>
-
-              <div className="notif-dropdown-list">
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className="notif-dropdown-item"
-                    onClick={() => {
-                      setShowNotifications(false);
-                      if (n.link) navigate(n.link);
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '13px', color: '#1e293b' }}>{n.title}</strong>
-                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>{n.time}</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{n.desc}</p>
+            {showNotifications && (
+              <div className="notif-dropdown">
+                <div className="notif-dropdown-header">
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700 }}>Notifications</h4>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>3 new workforce alerts</span>
                   </div>
-                ))}
+                  <button
+                    type="button"
+                    style={{ background: 'transparent', border: 'none', color: '#4f46e5', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => setShowNotifications(false)}
+                  >
+                    Mark all read
+                  </button>
+                </div>
+
+                <div className="notif-dropdown-list">
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className="notif-dropdown-item"
+                      onClick={() => {
+                        setShowNotifications(false);
+                        if (n.link) navigate(n.link);
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '13px', color: '#1e293b' }}>{n.title}</strong>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>{n.time}</span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>{n.desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* User Mini Profile Badge */}
         <div className="nav-user-capsule">
