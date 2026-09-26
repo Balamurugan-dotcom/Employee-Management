@@ -195,6 +195,17 @@ const checkIn = async (req, res) => {
       employee = await Employee.findOne({
         $or: [{ user: req.user._id }, { email: req.user.email }, { employeeId: req.user.employeeId }],
       });
+      if (!employee && req.user) {
+        employee = await Employee.create({
+          user: req.user._id,
+          name: req.user.name || 'Staff Member',
+          email: req.user.email,
+          employeeId: req.user.employeeId || `EMP-${Date.now().toString().slice(-4)}`,
+          department: req.user.department || (req.user.role === 'manager' ? 'Management' : 'Operations'),
+          designation: req.user.role === 'manager' ? 'Team Manager' : 'Employee',
+          role: req.user.role || 'employee',
+        });
+      }
     }
 
     if (!employee) {
@@ -314,7 +325,7 @@ const checkOut = async (req, res) => {
     let employee = req.employee;
     if (!employee) {
       employee = await Employee.findOne({
-        $or: [{ user: req.user._id }, { email: req.user.email }],
+        $or: [{ user: req.user._id }, { email: req.user.email }, { employeeId: req.user.employeeId }],
       });
     }
 

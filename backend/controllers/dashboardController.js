@@ -148,6 +148,18 @@ const getManagerDashboardStats = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
+    // Manager's own today attendance
+    const managerEmployee = await Employee.findOne({
+      $or: [{ user: managerId }, { email: req.user.email }, { employeeId: req.user.employeeId }],
+    });
+    let todayAttendance = null;
+    if (managerEmployee) {
+      todayAttendance = await Attendance.findOne({
+        employee: managerEmployee._id,
+        date: today,
+      });
+    }
+
     res.status(200).json({
       success: true,
       cards: {
@@ -160,6 +172,8 @@ const getManagerDashboardStats = async (req, res) => {
       },
       recentTasks,
       pendingTeamLeaves,
+      todayAttendance,
+      managerEmployee,
     });
   } catch (error) {
     res.status(500).json({
