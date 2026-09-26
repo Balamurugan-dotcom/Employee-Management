@@ -12,6 +12,11 @@ import {
   Filter,
   UserCheck,
   AlertTriangle,
+  Camera,
+  List,
+  LayoutGrid,
+  Maximize2,
+  X,
 } from 'lucide-react';
 
 const Employees = () => {
@@ -22,6 +27,10 @@ const Employees = () => {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [managers, setManagers] = useState([]);
   const [departments, setDepartments] = useState([]);
+
+  // View mode & Photo preview states
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'gallery'
+  const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -246,227 +255,599 @@ const Employees = () => {
             </div>
           </div>
 
-          <button className="btn btn-primary" onClick={handleOpenCreate}>
-            <Plus size={18} />
-            <span>Add Employee</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* View Mode Toggle: Table vs Captured Photos Gallery */}
+            <div
+              style={{
+                display: 'flex',
+                background: '#f1f5f9',
+                padding: '3px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: viewMode === 'table' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'table' ? '#4f46e5' : '#64748b',
+                  boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <List size={14} />
+                <span>Table</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('gallery')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: viewMode === 'gallery' ? '#ffffff' : 'transparent',
+                  color: viewMode === 'gallery' ? '#4f46e5' : '#64748b',
+                  boxShadow: viewMode === 'gallery' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Camera size={14} />
+                <span>
+                  Captured Photos ({employees.filter((e) => e.todayAttendance?.faceImage || e.lastCheckInPhoto).length})
+                </span>
+              </button>
+            </div>
+
+            <button className="btn btn-primary" onClick={handleOpenCreate}>
+              <Plus size={18} />
+              <span>Add Employee</span>
+            </button>
+          </div>
         </div>
 
-        {/* Responsive Table */}
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Employee ID</th>
-                <th>Profile</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Designation</th>
-                <th>Manager</th>
-                <th>Joining Date</th>
-                <th>Attendance & Status</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        {/* View Mode: Table View */}
+        {viewMode === 'table' ? (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
-                    <div className="spinner" style={{ margin: '0 auto' }}></div>
-                  </td>
+                  <th>Employee ID</th>
+                  <th>Profile</th>
+                  <th>Captured Photo</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Designation</th>
+                  <th>Manager</th>
+                  <th>Joining Date</th>
+                  <th>Attendance & Status</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
-              ) : employees.length === 0 ? (
-                <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-                    No employees found matching the filters.
-                  </td>
-                </tr>
-              ) : (
-                employees.map((emp) => (
-                  <tr key={emp._id}>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5' }}>
-                      <div>{emp.employeeId}</div>
-                      {emp.username && (
-                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, fontFamily: 'sans-serif' }}>
-                          @{emp.username}
-                        </div>
-                      )}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="11" style={{ textAlign: 'center', padding: '40px' }}>
+                      <div className="spinner" style={{ margin: '0 auto' }}></div>
                     </td>
-                    <td>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <img
-                          src={emp.profileImage || emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                          alt={emp.name}
-                          style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: (emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || emp.profileImage)
-                              ? '2px solid #10b981'
-                              : '1px solid #e2e8f0',
-                          }}
-                        />
-                        {(emp.todayAttendance?.faceImage || emp.lastCheckInPhoto || emp.profileImage) && (
-                          <span
-                            title="Verified Check-In Photo"
+                  </tr>
+                ) : employees.length === 0 ? (
+                  <tr>
+                    <td colSpan="11" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
+                      No employees found matching the filters.
+                    </td>
+                  </tr>
+                ) : (
+                  employees.map((emp) => {
+                    const capturedImg = emp.todayAttendance?.faceImage || emp.lastCheckInPhoto;
+                    const captureTime = emp.todayAttendance?.checkIn || emp.lastCheckInTime;
+
+                    return (
+                      <tr key={emp._id}>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5' }}>
+                          <div>{emp.employeeId}</div>
+                          {emp.username && (
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500, fontFamily: 'sans-serif' }}>
+                              @{emp.username}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Separate Profile Avatar Column */}
+                        <td>
+                          <img
+                            src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
+                            alt=""
                             style={{
-                              position: 'absolute',
-                              bottom: '-2px',
-                              right: '-2px',
-                              background: '#10b981',
-                              color: '#fff',
+                              width: '36px',
+                              height: '36px',
                               borderRadius: '50%',
-                              width: '14px',
-                              height: '14px',
+                              objectFit: 'cover',
+                              border: '1px solid #e2e8f0',
+                            }}
+                          />
+                        </td>
+
+                        {/* Separate Captured Photo Column */}
+                        <td>
+                          {capturedImg ? (
+                            <div
+                              onClick={() =>
+                                setPreviewPhotoModal({
+                                  photo: capturedImg,
+                                  name: emp.name,
+                                  employeeId: emp.employeeId,
+                                  department: emp.department,
+                                  designation: emp.designation,
+                                  time: captureTime,
+                                  dutyStatus: emp.dutyStatus,
+                                })
+                              }
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '3px 8px',
+                                borderRadius: '8px',
+                                background: '#ecfdf5',
+                                border: '1px solid #a7f3d0',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Click to view full captured check-in photo"
+                            >
+                              <img
+                                src={capturedImg}
+                                alt="Check-in Photo"
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '6px',
+                                  objectFit: 'cover',
+                                  border: '1.5px solid #10b981',
+                                }}
+                              />
+                              <div style={{ textAlign: 'left' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', display: 'block', lineHeight: 1.2 }}>
+                                  View Photo
+                                </span>
+                                <span style={{ fontSize: '9.5px', color: '#059669', display: 'block', lineHeight: 1.2 }}>
+                                  {emp.todayAttendance?.checkIn
+                                    ? new Date(emp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    : 'Recorded'}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                color: '#94a3b8',
+                                fontStyle: 'italic',
+                                background: '#f8fafc',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              No photo
+                            </span>
+                          )}
+                        </td>
+
+                        <td style={{ fontWeight: 600 }}>{emp.name}</td>
+                        <td style={{ color: '#475569' }}>{emp.email}</td>
+                        <td>
+                          <span style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}>
+                            {emp.department}
+                          </span>
+                        </td>
+                        <td>{emp.designation}</td>
+                        <td>{emp.manager?.name || emp.managerName || 'None'}</td>
+                        <td>{new Date(emp.joiningDate).toLocaleDateString()}</td>
+                        <td>
+                          {/* Live Today's Duty / Attendance Punch Status */}
+                          <div style={{ marginBottom: '4px' }}>
+                            {emp.dutyStatus === 'Checked Out' ? (
+                              <span
+                                style={{
+                                  background: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  fontWeight: 600,
+                                  fontSize: '11.5px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                🏁 Checked Out
+                                {emp.todayAttendance?.checkOut && (
+                                  <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
+                                    ({new Date(emp.todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                                  </span>
+                                )}
+                              </span>
+                            ) : emp.dutyStatus === 'Checked In' ? (
+                              <span
+                                style={{
+                                  background: '#ecfdf5',
+                                  color: '#047857',
+                                  border: '1px solid #a7f3d0',
+                                  fontWeight: 600,
+                                  fontSize: '11.5px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                🟢 Checked In
+                                {emp.todayAttendance?.checkIn && (
+                                  <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
+                                    ({new Date(emp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                                  </span>
+                                )}
+                              </span>
+                            ) : emp.dutyStatus === 'On Break' ? (
+                              <span
+                                style={{
+                                  background: '#fffbeb',
+                                  color: '#b45309',
+                                  border: '1px solid #fde68a',
+                                  fontWeight: 600,
+                                  fontSize: '11.5px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                ☕ On Break
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  background: '#f8fafc',
+                                  color: '#64748b',
+                                  border: '1px solid #e2e8f0',
+                                  fontWeight: 500,
+                                  fontSize: '11.5px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                ⚪ Not In Yet
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Employment Account Status */}
+                          <span
+                            className={`badge badge-${emp.status?.toLowerCase()}`}
+                            style={{ cursor: 'pointer', fontSize: '10.5px', padding: '2px 6px' }}
+                            title="Click to toggle account status (Active / Inactive)"
+                            onClick={() => handleToggleStatus(emp)}
+                          >
+                            Account: {emp.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <button
+                              className="btn-icon"
+                              title="View Details"
+                              onClick={() => handleOpenView(emp)}
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              className="btn-icon"
+                              title="Edit Employee"
+                              onClick={() => handleOpenEdit(emp)}
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              className="btn-icon delete"
+                              title="Delete Employee"
+                              onClick={() => setDeleteConfirmId(emp._id)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* View Mode: Captured Photos Gallery View */
+          <div style={{ padding: '20px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid #f1f5f9',
+              }}
+            >
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
+                  All Employee Check-In Photos
+                </h4>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
+                  Live webcam camera snapshots captured during attendance check-in
+                </p>
+              </div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#047857',
+                  background: '#ecfdf5',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  border: '1px solid #a7f3d0',
+                }}
+              >
+                📸 {employees.filter((e) => e.todayAttendance?.faceImage || e.lastCheckInPhoto).length} Photos Available
+              </div>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '50px' }}>
+                <div className="spinner" style={{ margin: '0 auto' }}></div>
+              </div>
+            ) : employees.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8' }}>
+                No employees found matching the filters.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+                  gap: '18px',
+                }}
+              >
+                {employees.map((emp) => {
+                  const capturedImg = emp.todayAttendance?.faceImage || emp.lastCheckInPhoto;
+                  const captureTime = emp.todayAttendance?.checkIn || emp.lastCheckInTime;
+
+                  return (
+                    <div
+                      key={emp._id}
+                      style={{
+                        background: '#ffffff',
+                        borderRadius: '14px',
+                        border: capturedImg ? '1.5px solid #a7f3d0' : '1px solid #e2e8f0',
+                        boxShadow: capturedImg
+                          ? '0 4px 14px rgba(16, 185, 129, 0.1)'
+                          : '0 2px 6px rgba(0, 0, 0, 0.03)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      {/* Photo Area */}
+                      <div
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '170px',
+                          background: '#0f172a',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {capturedImg ? (
+                          <img
+                            src={capturedImg}
+                            alt={emp.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() =>
+                              setPreviewPhotoModal({
+                                photo: capturedImg,
+                                name: emp.name,
+                                employeeId: emp.employeeId,
+                                department: emp.department,
+                                designation: emp.designation,
+                                time: captureTime,
+                                dutyStatus: emp.dutyStatus,
+                              })
+                            }
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
                               display: 'flex',
+                              flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '8px',
-                              border: '1.5px solid #fff',
+                              background: '#f8fafc',
+                              color: '#94a3b8',
                             }}
                           >
-                            ✓
-                          </span>
+                            <img
+                              src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
+                              alt=""
+                              style={{ width: '54px', height: '54px', borderRadius: '50%', marginBottom: '6px', opacity: 0.7 }}
+                            />
+                            <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>No Captured Photo</span>
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{emp.name}</td>
-                    <td style={{ color: '#475569' }}>{emp.email}</td>
-                    <td>
-                      <span style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}>
-                        {emp.department}
-                      </span>
-                    </td>
-                    <td>{emp.designation}</td>
-                    <td>{emp.manager?.name || emp.managerName || 'None'}</td>
-                    <td>{new Date(emp.joiningDate).toLocaleDateString()}</td>
-                    <td>
-                      {/* Live Today's Duty / Attendance Punch Status */}
-                      <div style={{ marginBottom: '4px' }}>
-                        {emp.dutyStatus === 'Checked Out' ? (
+
+                        {capturedImg ? (
                           <span
                             style={{
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              border: '1px solid #bfdbfe',
-                              fontWeight: 600,
-                              fontSize: '11.5px',
-                              padding: '3px 8px',
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              background: 'rgba(16, 185, 129, 0.92)',
+                              color: '#ffffff',
+                              padding: '2px 8px',
                               borderRadius: '6px',
-                              display: 'inline-flex',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              display: 'flex',
                               alignItems: 'center',
                               gap: '4px',
                             }}
                           >
-                            🏁 Checked Out
-                            {emp.todayAttendance?.checkOut && (
-                              <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
-                                ({new Date(emp.todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-                              </span>
-                            )}
-                          </span>
-                        ) : emp.dutyStatus === 'Checked In' ? (
-                          <span
-                            style={{
-                              background: '#ecfdf5',
-                              color: '#047857',
-                              border: '1px solid #a7f3d0',
-                              fontWeight: 600,
-                              fontSize: '11.5px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            🟢 Checked In
-                            {emp.todayAttendance?.checkIn && (
-                              <span style={{ fontSize: '10px', opacity: 0.85, fontWeight: 500 }}>
-                                ({new Date(emp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-                              </span>
-                            )}
-                          </span>
-                        ) : emp.dutyStatus === 'On Break' ? (
-                          <span
-                            style={{
-                              background: '#fffbeb',
-                              color: '#b45309',
-                              border: '1px solid #fde68a',
-                              fontWeight: 600,
-                              fontSize: '11.5px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            ☕ On Break
+                            <Camera size={11} /> Captured
                           </span>
                         ) : (
                           <span
                             style={{
-                              background: '#f8fafc',
-                              color: '#64748b',
-                              border: '1px solid #e2e8f0',
-                              fontWeight: 500,
-                              fontSize: '11.5px',
-                              padding: '3px 8px',
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              background: 'rgba(148, 163, 184, 0.85)',
+                              color: '#ffffff',
+                              padding: '2px 8px',
                               borderRadius: '6px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
+                              fontSize: '10px',
+                              fontWeight: 600,
                             }}
                           >
-                            ⚪ Not In Yet
+                            Pending
                           </span>
                         )}
                       </div>
 
-                      {/* Employment Account Status */}
-                      <span
-                        className={`badge badge-${emp.status?.toLowerCase()}`}
-                        style={{ cursor: 'pointer', fontSize: '10.5px', padding: '2px 6px' }}
-                        title="Click to toggle account status (Active / Inactive)"
-                        onClick={() => handleToggleStatus(emp)}
-                      >
-                        Account: {emp.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <button
-                          className="btn-icon"
-                          title="View Details"
-                          onClick={() => handleOpenView(emp)}
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          className="btn-icon"
-                          title="Edit Employee"
-                          onClick={() => handleOpenEdit(emp)}
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                        <button
-                          className="btn-icon delete"
-                          title="Delete Employee"
-                          onClick={() => setDeleteConfirmId(emp._id)}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                      {/* Card Meta */}
+                      <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                              {emp.name}
+                            </h4>
+                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#4f46e5' }}>
+                              {emp.employeeId}
+                            </span>
+                          </div>
+                          <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#64748b' }}>
+                            {emp.designation} • {emp.department}
+                          </p>
+                        </div>
+
+                        <div>
+                          <div style={{ padding: '6px 8px', background: '#f8fafc', borderRadius: '6px', fontSize: '11px', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                              <span>Status:</span>
+                              <strong style={{ color: emp.dutyStatus === 'Checked In' ? '#059669' : '#334155' }}>
+                                {emp.dutyStatus}
+                              </strong>
+                            </div>
+                            {captureTime && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' }}>
+                                <span>Time:</span>
+                                <strong>{new Date(captureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {capturedImg && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewPhotoModal({
+                                    photo: capturedImg,
+                                    name: emp.name,
+                                    employeeId: emp.employeeId,
+                                    department: emp.department,
+                                    designation: emp.designation,
+                                    time: captureTime,
+                                    dutyStatus: emp.dutyStatus,
+                                  })
+                                }
+                                style={{
+                                  flex: 1,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  padding: '6px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #10b981',
+                                  background: '#ecfdf5',
+                                  color: '#047857',
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Maximize2 size={12} /> View Photo
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenView(emp)}
+                              style={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                padding: '6px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                background: '#ffffff',
+                                color: '#475569',
+                                fontSize: '11.5px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Eye size={12} /> Dossier
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Create / Edit Modal */}
@@ -960,6 +1341,119 @@ const Employees = () => {
               >
                 Yes, Delete Employee
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox / Full Size Captured Photo Modal */}
+      {previewPhotoModal && (
+        <div
+          className="modal-overlay"
+          style={{
+            zIndex: 10000,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '460px',
+              padding: 0,
+              overflow: 'hidden',
+              background: '#0f172a',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+            }}
+          >
+            <div
+              style={{
+                padding: '14px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'linear-gradient(180deg, rgba(30, 41, 59, 0.7), transparent)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Camera size={18} color="#10b981" />
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f8fafc' }}>
+                  Captured Check-In Photo
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px', textAlign: 'center', background: '#020617' }}>
+              <img
+                src={previewPhotoModal.photo}
+                alt="Captured Check-In"
+                style={{
+                  width: '100%',
+                  maxHeight: '360px',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  border: '2px solid #10b981',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.6)',
+                }}
+              />
+            </div>
+
+            <div style={{ padding: '16px 20px', background: '#0f172a', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#f8fafc' }}>
+                    {previewPhotoModal.name}
+                  </h4>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    {previewPhotoModal.employeeId} • {previewPhotoModal.designation} ({previewPhotoModal.department})
+                  </div>
+                </div>
+                {previewPhotoModal.dutyStatus && (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#34d399',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    {previewPhotoModal.dutyStatus}
+                  </span>
+                )}
+              </div>
+
+              {previewPhotoModal.time && (
+                <div style={{ fontSize: '12px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Recorded:</span>
+                  <strong style={{ color: '#38bdf8' }}>
+                    {new Date(previewPhotoModal.time).toLocaleString()}
+                  </strong>
+                </div>
+              )}
             </div>
           </div>
         </div>
