@@ -15,8 +15,11 @@ import {
   ShieldCheck,
   ArrowLeft,
   RefreshCw,
+  MapPin,
+  MapPinOff,
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
+import { verifyAttendanceLocation } from '../utils/locationService';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
@@ -43,8 +46,9 @@ const Login = () => {
   const [forgotStatus, setForgotStatus] = useState({ success: false, message: '' });
   const [forgotLoading, setForgotLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [verifyingLocation, setVerifyingLocation] = useState(false);
 
-  const { login, user } = useAuth();
+  const { login, logout, user } = useAuth();
   const navigate = useNavigate();
 
   // If already logged in, redirect automatically based on role
@@ -74,19 +78,50 @@ const Login = () => {
     setLoading(true);
 
     const result = await login(identifier, password, rememberMe);
-    setLoading(false);
 
     if (result.success) {
       const loggedUser = result.user;
       // Automatic role-based dashboard redirection
       if (loggedUser.role === 'admin') {
+        setLoading(false);
         navigate('/admin/dashboard', { replace: true });
       } else if (loggedUser.role === 'manager') {
+        setLoading(false);
         navigate('/manager/dashboard', { replace: true });
       } else {
-        navigate('/employee/dashboard', { replace: true });
+        // Employee Role: Verify whether the employee is physically present within authorized office location
+        setVerifyingLocation(true);
+        try {
+          const locCheck = await verifyAttendanceLocation();
+          if (locCheck.success) {
+            // Employee is within permitted geofence -> open Employee Dashboard
+            setLoading(false);
+            setVerifyingLocation(false);
+            navigate('/employee/dashboard', { replace: true });
+          } else {
+            // Employee is outside authorized office location -> deny access
+            await logout();
+            setLoading(false);
+            setVerifyingLocation(false);
+            const distInfo = locCheck.distance !== undefined
+              ? ` (Current distance: ${locCheck.distance}m away; permitted: ${locCheck.allowedRadius}m).`
+              : '';
+            setErrorMessage(
+              locCheck.message ||
+              `Access Denied: You are outside the authorized office location (${locCheck.officeName || 'Main Office'})${distInfo} Access to Employee Dashboard is restricted to authorized workplace premises.`
+            );
+          }
+        } catch (locErr) {
+          await logout();
+          setLoading(false);
+          setVerifyingLocation(false);
+          setErrorMessage(
+            locErr.message || 'Access Denied: Unable to verify your physical presence at the office.'
+          );
+        }
       }
     } else {
+      setLoading(false);
       setErrorMessage(result.message || 'Login failed. Please check your credentials.');
     }
   };
@@ -286,9 +321,33 @@ const Login = () => {
         </div>
 
         {errorMessage && (
-          <div className="alert alert-danger">
-            <AlertCircle size={18} />
-            <span>{errorMessage}</span>
+          <div
+            className="alert alert-danger"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              padding: '14px 16px',
+              borderRadius: '10px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#991b1b',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ marginTop: '2px', flexShrink: 0 }}>
+              {errorMessage.includes('Location') || errorMessage.includes('office') || errorMessage.includes('geofence') || errorMessage.includes('Access Denied') ? (
+                <MapPinOff size={20} color="#dc2626" />
+              ) : (
+                <AlertCircle size={20} color="#dc2626" />
+              )}
+            </div>
+            <div style={{ flex: 1, fontSize: '13px', lineHeight: 1.5 }}>
+              <strong style={{ display: 'block', fontSize: '13.5px', marginBottom: '2px', color: '#7f1d1d' }}>
+                {errorMessage.includes('Access Denied') ? 'Workplace Geofence Alert' : 'Authentication Notice'}
+              </strong>
+              <span>{errorMessage}</span>
+            </div>
           </div>
         )}
 
@@ -372,9 +431,14 @@ const Login = () => {
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', padding: '12px', fontSize: '15px' }}
-            disabled={loading}
+            disabled={loading || verifyingLocation}
           >
-            {loading ? (
+            {verifyingLocation ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Verifying Workplace Geofence...</span>
+              </span>
+            ) : loading ? (
               <span>Authenticating...</span>
             ) : (
               <>

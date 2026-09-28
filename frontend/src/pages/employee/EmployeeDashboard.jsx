@@ -16,6 +16,8 @@ import {
   ArrowRight,
   X,
   MapPin,
+  MapPinOff,
+  ShieldAlert,
   RefreshCw,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -24,7 +26,7 @@ import FaceVerificationModal from '../../components/FaceVerificationModal';
 import { verifyAttendanceLocation } from '../../utils/locationService';
 
 const EmployeeDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ const EmployeeDashboard = () => {
   const [officeInfo, setOfficeInfo] = useState(null);
   const [userDistance, setUserDistance] = useState(null);
   const [checkingOfficeLoc, setCheckingOfficeLoc] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('checking'); // 'checking' | 'allowed' | 'denied'
+  const [deniedDetails, setDeniedDetails] = useState(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -59,8 +63,18 @@ const EmployeeDashboard = () => {
         setUserDistance(locCheck.distance);
       }
       setVerifiedLocation(locCheck);
+
+      if (locCheck.success) {
+        setLocationStatus('allowed');
+        setDeniedDetails(null);
+      } else {
+        setLocationStatus('denied');
+        setDeniedDetails(locCheck);
+      }
     } catch (err) {
       console.warn('Failed to load workplace location:', err);
+      setLocationStatus('denied');
+      setDeniedDetails({ message: err.message || 'Failed to verify GPS workplace location.' });
     } finally {
       setCheckingOfficeLoc(false);
     }
@@ -255,10 +269,139 @@ const EmployeeDashboard = () => {
     }
   };
 
-  if (loading) {
+  // Loading & Geofence Verification Screens
+  if (loading || locationStatus === 'checking') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '80px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '65vh', gap: '16px' }}>
         <div className="spinner"></div>
+        <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>
+          {checkingOfficeLoc ? 'Verifying authorized office geofence presence...' : 'Loading Employee Workspace...'}
+        </p>
+      </div>
+    );
+  }
+
+  // Geofence Restriction: If employee is outside authorized office location -> Deny Access
+  if (locationStatus === 'denied') {
+    return (
+      <div
+        style={{
+          minHeight: '70vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '560px',
+            width: '100%',
+            background: '#ffffff',
+            borderRadius: '16px',
+            boxShadow: '0 20px 45px -10px rgba(239, 68, 68, 0.18), 0 0 0 1px #fee2e2',
+            padding: '36px 30px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              background: '#fef2f2',
+              color: '#ef4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 18px',
+              border: '2px solid #fecaca',
+            }}
+          >
+            <MapPinOff size={36} />
+          </div>
+
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: '#dc2626',
+              background: '#fee2e2',
+              padding: '4px 12px',
+              borderRadius: '20px',
+            }}
+          >
+            Geofence Security Policy
+          </span>
+
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1e293b', marginTop: '12px', marginBottom: '8px' }}>
+            Access Denied: Outside Authorized Office
+          </h1>
+
+          <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
+            {deniedDetails?.message ||
+              'Access to the Employee Dashboard is denied because you are not physically present within the permitted workplace geofence.'}
+          </p>
+
+          {/* Location Telemetry Box */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              marginBottom: '26px',
+              fontSize: '13px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ color: '#64748b' }}>Authorized Workplace:</span>
+              <strong style={{ color: '#0f172a' }}>{deniedDetails?.officeName || officeInfo?.name || 'Main Office'}</strong>
+            </div>
+            {deniedDetails?.allowedRadius && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#64748b' }}>Permitted Geofence:</span>
+                <strong style={{ color: '#0f172a' }}>Within {deniedDetails.allowedRadius} meters</strong>
+              </div>
+            )}
+            {deniedDetails?.distance !== undefined && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: '#64748b' }}>Current Detected Distance:</span>
+                <strong style={{ color: '#dc2626' }}>{deniedDetails.distance} meters away</strong>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Policy Requirement:</span>
+              <span style={{ color: '#dc2626', fontWeight: 700 }}>Physical On-Premise Presence Required</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={loadOfficeLocation}
+              disabled={checkingOfficeLoc}
+              className="btn btn-primary"
+              style={{ padding: '11px 22px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}
+            >
+              <RefreshCw size={16} className={checkingOfficeLoc ? 'animate-spin' : ''} />
+              <span>{checkingOfficeLoc ? 'Verifying GPS...' : 'Retry Location Check'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="btn btn-secondary"
+              style={{ padding: '11px 20px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <LogOut size={16} />
+              <span>Log Out</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
