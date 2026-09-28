@@ -270,6 +270,9 @@ const EmployeeDashboard = () => {
   const isOnBreak = !!todayAttendance?.isOnBreak;
   const isOnLunch = !!todayAttendance?.isOnLunch;
 
+  const rawName = user?.name || user?.username || employee?.name || 'Employee';
+  const userName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
   return (
     <div>
       {/* Alert Notification Banner */}
@@ -314,23 +317,38 @@ const EmployeeDashboard = () => {
         }}
       >
         <div>
-          <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a5b4fc', fontWeight: 700 }}>
-            DAILY ATTENDANCE PUNCH
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#a5b4fc', fontWeight: 700 }}>
+              DAILY ATTENDANCE PUNCH
+            </span>
+            {hasCheckedIn && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  color: '#34d399',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  fontWeight: 600,
+                }}
+              >
+                {isOnLunch ? 'On Lunch' : isOnBreak ? 'On Break' : hasCheckedOut ? 'Shift Ended' : 'On Duty'}
+              </span>
+            )}
+          </div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px' }}>
+            Welcome to {userName}
+          </h2>
+          <p style={{ fontSize: '13px', color: '#c7d2fe', marginTop: '4px' }}>
             {hasCheckedOut
-              ? 'Shift Finished for Today'
+              ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
               : isOnLunch
               ? 'Currently on Lunch Break 🍽️'
               : isOnBreak
               ? 'Currently on Short Break ☕'
-              : hasCheckedIn
-              ? 'Currently On Duty (Checked In)'
-              : 'Ready to Start Your Work Shift?'}
-          </h2>
-          <p style={{ fontSize: '13px', color: '#c7d2fe', marginTop: '4px' }}>
-            {hasCheckedIn && todayAttendance?.checkIn
-              ? `Clocked in at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              : hasCheckedIn && todayAttendance?.checkIn
+              ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
               : 'Log your arrival time accurately for payroll processing'}
             {isOnBreak && todayAttendance?.breakIn
               ? ` • Break started at ${new Date(todayAttendance.breakIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
