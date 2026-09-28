@@ -117,7 +117,7 @@ const EmployeeReports = () => {
     setFormData({
       id: null,
       date: dateToUse,
-      title: `Daily Work Progress Report - ${formatDisplayDate(dateToUse)}`,
+      title: '',
       description: '',
       hoursWorked: 8,
       status: 'Submitted',
@@ -153,7 +153,7 @@ const EmployeeReports = () => {
     try {
       const payload = {
         date: formData.date,
-        title: formData.title,
+        title: formData.title.trim() || `Daily Work Report - ${formatDisplayDate(formData.date)}`,
         description: formData.description,
         hoursWorked: Number(formData.hoursWorked) || 8,
         status: formData.status,
@@ -903,15 +903,7 @@ const EmployeeReports = () => {
                       type="date"
                       className="form-control"
                       value={formData.date}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          date: e.target.value,
-                          title: formData.title.includes('Daily Work Progress Report')
-                            ? `Daily Work Progress Report - ${formatDisplayDate(e.target.value)}`
-                            : formData.title,
-                        })
-                      }
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       required
                     />
                     <span style={{ fontSize: '11px', color: '#64748b', marginTop: '3px' }}>
@@ -928,7 +920,6 @@ const EmployeeReports = () => {
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="e.g. Daily Progress Report - Sprint deliverables & testing"
-                      required
                     />
                   </div>
 

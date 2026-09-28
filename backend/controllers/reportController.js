@@ -130,13 +130,7 @@ const createOrUpdateReport = async (req, res) => {
     } = req.body;
 
     const reportDate = date ? String(date).trim() : getTodayDateStr();
-
-    if (!title || !title.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a title or work summary for the daily report.',
-      });
-    }
+    const finalTitle = title && title.trim() ? title.trim() : `Daily Report - ${reportDate}`;
 
     const reportDescription = description !== undefined ? String(description).trim() : '';
 
@@ -168,7 +162,7 @@ const createOrUpdateReport = async (req, res) => {
 
     if (report) {
       // Update existing entity
-      report.title = title.trim();
+      report.title = finalTitle;
       if (description !== undefined) report.description = reportDescription;
       report.tasksCompleted = tasksCompletedArr;
       report.tasksPending = tasksPendingArr;
@@ -195,7 +189,7 @@ const createOrUpdateReport = async (req, res) => {
       employeeId: employee.employeeId || req.user.employeeId || 'EMP',
       department: employee.department || 'General',
       date: reportDate,
-      title: title.trim(),
+      title: finalTitle,
       description: reportDescription,
       tasksCompleted: tasksCompletedArr,
       tasksPending: tasksPendingArr,
