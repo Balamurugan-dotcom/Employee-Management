@@ -771,45 +771,29 @@ const Employees = () => {
             </div>
             <div className="modal-body">
               {(() => {
-                const checkInPhoto = selectedEmp.todayAttendance?.faceImage || selectedEmp.lastCheckInPhoto || selectedEmp.profileImage;
+                const checkInPhoto = selectedEmp.todayAttendance?.faceImage || selectedEmp.lastCheckInPhoto;
+                const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedEmp.name || 'Staff')}`;
+                const profilePhoto = selectedEmp.profileImage || fallbackAvatar;
+
                 return (
                   <>
                     <div style={{ textAlign: 'center', marginBottom: '18px' }}>
                       <div style={{ position: 'relative', display: 'inline-block' }}>
                         <img
-                          src={checkInPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedEmp.name}`}
+                          src={profilePhoto}
                           alt={selectedEmp.name}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = fallbackAvatar;
+                          }}
                           style={{
                             width: '88px',
                             height: '88px',
                             borderRadius: '50%',
                             objectFit: 'cover',
-                            border: checkInPhoto ? '3.5px solid #10b981' : '3px solid #4f46e5',
-                            boxShadow: checkInPhoto ? '0 0 16px rgba(16, 185, 129, 0.35)' : 'none',
+                            border: '3px solid #4f46e5',
                           }}
                         />
-                        {checkInPhoto && (
-                          <span
-                            title="Verified Check-In Photo"
-                            style={{
-                              position: 'absolute',
-                              bottom: '2px',
-                              right: '2px',
-                              background: '#10b981',
-                              color: '#fff',
-                              borderRadius: '50%',
-                              width: '22px',
-                              height: '22px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '12px',
-                              border: '2px solid #fff',
-                            }}
-                          >
-                            📷
-                          </span>
-                        )}
                       </div>
                       <h3 style={{ marginTop: '10px', marginBottom: '2px' }}>{selectedEmp.name}</h3>
                       <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>

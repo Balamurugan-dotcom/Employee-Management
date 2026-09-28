@@ -287,23 +287,15 @@ const checkIn = async (req, res) => {
       await attendance.save();
     }
 
-    // Update Employee profile photo and last check-in photo so Admin Employee Profile displays it
+    // Update Employee last check-in photo for attendance verification only (do NOT overwrite official profile photo)
     if (photo) {
       try {
         await Employee.findByIdAndUpdate(employee._id, {
-          profileImage: photo,
           lastCheckInPhoto: photo,
           lastCheckInTime: now,
         });
-
-        const targetUserId = employee.user || req.user?._id;
-        if (targetUserId) {
-          await User.findByIdAndUpdate(targetUserId, {
-            avatar: photo,
-          });
-        }
       } catch (photoUpdateErr) {
-        console.warn('Failed to update employee/user avatar with check-in photo:', photoUpdateErr);
+        console.warn('Failed to update employee last check-in photo:', photoUpdateErr);
       }
     }
 

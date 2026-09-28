@@ -101,20 +101,27 @@ const AdminAttendance = () => {
                 </tr>
               ) : (
                 records.map((r) => {
-                  const checkInPhoto = r.faceImage || r.employee?.profileImage;
+                  const checkInPhoto = r.faceImage || r.employee?.lastCheckInPhoto;
+                  const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(r.employee?.name || 'Staff')}`;
+                  const employeeAvatar = r.employee?.profileImage || fallbackAvatar;
+
                   return (
                     <tr key={r._id}>
                       <td>
                         <div className="user-cell">
                           <img
-                            src={checkInPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${r.employee?.name}`}
+                            src={employeeAvatar}
                             alt=""
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = fallbackAvatar;
+                            }}
                             style={{
                               width: '36px',
                               height: '36px',
                               borderRadius: '50%',
                               objectFit: 'cover',
-                              border: checkInPhoto ? '2px solid #10b981' : '1px solid #e2e8f0',
+                              border: '1px solid #e2e8f0',
                             }}
                           />
                           <div className="user-cell-meta">
