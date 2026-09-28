@@ -12,10 +12,11 @@ const apiLimiter = rateLimit({
   },
 });
 
-// Strict Login Rate Limiter: 10 login attempts per 15-minute window per IP
+// Strict Login Rate Limiter: failed login brute-force protection
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
