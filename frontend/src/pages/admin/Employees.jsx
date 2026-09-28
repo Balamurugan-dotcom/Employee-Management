@@ -28,8 +28,7 @@ const Employees = () => {
   const [managers, setManagers] = useState([]);
   const [departments, setDepartments] = useState([]);
 
-  // View mode & Photo preview states
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'gallery'
+  // Photo preview modal state
   const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
 
   // Modal states
@@ -274,65 +273,6 @@ const Employees = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* View Mode Toggle: Table vs Captured Photos Gallery */}
-            <div
-              style={{
-                display: 'flex',
-                background: '#f1f5f9',
-                padding: '3px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: viewMode === 'table' ? '#ffffff' : 'transparent',
-                  color: viewMode === 'table' ? '#4f46e5' : '#64748b',
-                  boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <List size={14} />
-                <span>Table</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setViewMode('gallery')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  background: viewMode === 'gallery' ? '#ffffff' : 'transparent',
-                  color: viewMode === 'gallery' ? '#4f46e5' : '#64748b',
-                  boxShadow: viewMode === 'gallery' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Camera size={14} />
-                <span>
-                  Captured Photos ({employees.filter((e) => e.todayAttendance?.faceImage || e.lastCheckInPhoto).length})
-                </span>
-              </button>
-            </div>
-
             <button className="btn btn-primary" onClick={handleOpenCreate}>
               <Plus size={18} />
               <span>Add Employee</span>
@@ -340,39 +280,37 @@ const Employees = () => {
           </div>
         </div>
 
-        {/* View Mode: Table View */}
-        {viewMode === 'table' ? (
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
+        {/* Employee Table */}
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Profile</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Manager</th>
+                <th>Joining Date</th>
+                <th>Attendance & Status</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
                 <tr>
-                  <th>Employee ID</th>
-                  <th>Profile</th>
-                  <th>Captured Photo</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Department</th>
-                  <th>Designation</th>
-                  <th>Manager</th>
-                  <th>Joining Date</th>
-                  <th>Attendance & Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
+                    <div className="spinner" style={{ margin: '0 auto' }}></div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="11" style={{ textAlign: 'center', padding: '40px' }}>
-                      <div className="spinner" style={{ margin: '0 auto' }}></div>
-                    </td>
-                  </tr>
-                ) : employees.length === 0 ? (
-                  <tr>
-                    <td colSpan="11" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-                      No employees found matching the filters.
-                    </td>
-                  </tr>
-                ) : (
+              ) : employees.length === 0 ? (
+                <tr>
+                  <td colSpan="10" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
+                    No employees found matching the filters.
+                  </td>
+                </tr>
+              ) : (
                   employees.map((emp) => {
                     const capturedImg = emp.todayAttendance?.faceImage || emp.lastCheckInPhoto;
                     const captureTime = emp.todayAttendance?.checkIn || emp.lastCheckInTime;
@@ -401,73 +339,6 @@ const Employees = () => {
                               border: '1px solid #e2e8f0',
                             }}
                           />
-                        </td>
-
-                        {/* Separate Captured Photo Column */}
-                        <td>
-                          {capturedImg ? (
-                            <div
-                              onClick={() =>
-                                setPreviewPhotoModal({
-                                  photo: capturedImg,
-                                  name: emp.name,
-                                  employeeId: emp.employeeId,
-                                  department: emp.department,
-                                  designation: emp.designation,
-                                  time: captureTime,
-                                  dutyStatus: emp.dutyStatus,
-                                })
-                              }
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '3px 8px',
-                                borderRadius: '8px',
-                                background: '#ecfdf5',
-                                border: '1px solid #a7f3d0',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                              }}
-                              title="Click to view full captured check-in photo"
-                            >
-                              <img
-                                src={capturedImg}
-                                alt="Check-in Photo"
-                                style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '6px',
-                                  objectFit: 'cover',
-                                  border: '1.5px solid #10b981',
-                                }}
-                              />
-                              <div style={{ textAlign: 'left' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', display: 'block', lineHeight: 1.2 }}>
-                                  View Photo
-                                </span>
-                                <span style={{ fontSize: '9.5px', color: '#059669', display: 'block', lineHeight: 1.2 }}>
-                                  {emp.todayAttendance?.checkIn
-                                    ? new Date(emp.todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : 'Recorded'}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                color: '#94a3b8',
-                                fontStyle: 'italic',
-                                background: '#f8fafc',
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                border: '1px solid #e2e8f0',
-                              }}
-                            >
-                              No photo
-                            </span>
-                          )}
                         </td>
 
                         <td style={{ fontWeight: 600 }}>{emp.name}</td>
@@ -606,266 +477,6 @@ const Employees = () => {
               </tbody>
             </table>
           </div>
-        ) : (
-          /* View Mode: Captured Photos Gallery View */
-          <div style={{ padding: '20px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '1px solid #f1f5f9',
-              }}
-            >
-              <div>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                  All Employee Check-In Photos
-                </h4>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
-                  Live webcam camera snapshots captured during attendance check-in
-                </p>
-              </div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#047857',
-                  background: '#ecfdf5',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  border: '1px solid #a7f3d0',
-                }}
-              >
-                📸 {employees.filter((e) => e.todayAttendance?.faceImage || e.lastCheckInPhoto).length} Photos Available
-              </div>
-            </div>
-
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '50px' }}>
-                <div className="spinner" style={{ margin: '0 auto' }}></div>
-              </div>
-            ) : employees.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8' }}>
-                No employees found matching the filters.
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-                  gap: '18px',
-                }}
-              >
-                {employees.map((emp) => {
-                  const capturedImg = emp.todayAttendance?.faceImage || emp.lastCheckInPhoto;
-                  const captureTime = emp.todayAttendance?.checkIn || emp.lastCheckInTime;
-
-                  return (
-                    <div
-                      key={emp._id}
-                      style={{
-                        background: '#ffffff',
-                        borderRadius: '14px',
-                        border: capturedImg ? '1.5px solid #a7f3d0' : '1px solid #e2e8f0',
-                        boxShadow: capturedImg
-                          ? '0 4px 14px rgba(16, 185, 129, 0.1)'
-                          : '0 2px 6px rgba(0, 0, 0, 0.03)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      {/* Photo Area */}
-                      <div
-                        style={{
-                          position: 'relative',
-                          width: '100%',
-                          height: '170px',
-                          background: '#0f172a',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {capturedImg ? (
-                          <img
-                            src={capturedImg}
-                            alt={emp.name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              cursor: 'pointer',
-                            }}
-                            onClick={() =>
-                              setPreviewPhotoModal({
-                                photo: capturedImg,
-                                name: emp.name,
-                                employeeId: emp.employeeId,
-                                department: emp.department,
-                                designation: emp.designation,
-                                time: captureTime,
-                                dutyStatus: emp.dutyStatus,
-                              })
-                            }
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              background: '#f8fafc',
-                              color: '#94a3b8',
-                            }}
-                          >
-                            <img
-                              src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                              alt=""
-                              style={{ width: '54px', height: '54px', borderRadius: '50%', marginBottom: '6px', opacity: 0.7 }}
-                            />
-                            <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>No Captured Photo</span>
-                          </div>
-                        )}
-
-                        {capturedImg ? (
-                          <span
-                            style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              background: 'rgba(16, 185, 129, 0.92)',
-                              color: '#ffffff',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '10.5px',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <Camera size={11} /> Captured
-                          </span>
-                        ) : (
-                          <span
-                            style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              background: 'rgba(148, 163, 184, 0.85)',
-                              color: '#ffffff',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '10px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Pending
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Card Meta */}
-                      <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                              {emp.name}
-                            </h4>
-                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#4f46e5' }}>
-                              {emp.employeeId}
-                            </span>
-                          </div>
-                          <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#64748b' }}>
-                            {emp.designation} • {emp.department}
-                          </p>
-                        </div>
-
-                        <div>
-                          <div style={{ padding: '6px 8px', background: '#f8fafc', borderRadius: '6px', fontSize: '11px', marginBottom: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                              <span>Status:</span>
-                              <strong style={{ color: emp.dutyStatus === 'Checked In' ? '#059669' : '#334155' }}>
-                                {emp.dutyStatus}
-                              </strong>
-                            </div>
-                            {captureTime && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', marginTop: '2px' }}>
-                                <span>Time:</span>
-                                <strong>{new Date(captureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
-                              </div>
-                            )}
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {capturedImg && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPreviewPhotoModal({
-                                    photo: capturedImg,
-                                    name: emp.name,
-                                    employeeId: emp.employeeId,
-                                    department: emp.department,
-                                    designation: emp.designation,
-                                    time: captureTime,
-                                    dutyStatus: emp.dutyStatus,
-                                  })
-                                }
-                                style={{
-                                  flex: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
-                                  padding: '6px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #10b981',
-                                  background: '#ecfdf5',
-                                  color: '#047857',
-                                  fontSize: '11.5px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                <Maximize2 size={12} /> View Photo
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenView(emp)}
-                              style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                padding: '6px',
-                                borderRadius: '6px',
-                                border: '1px solid #cbd5e1',
-                                background: '#ffffff',
-                                color: '#475569',
-                                fontSize: '11.5px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Eye size={12} /> Dossier
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Create / Edit Modal */}
