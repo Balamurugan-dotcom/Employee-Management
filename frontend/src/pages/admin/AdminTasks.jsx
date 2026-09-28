@@ -35,8 +35,22 @@ const AdminTasks = () => {
     });
   }, []);
 
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getTodayDateStr();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.dueDate < todayStr) {
+      alert('Due date cannot be in the past. Please select today or a future date.');
+      return;
+    }
+
     try {
       const res = await api.post('/tasks', formData);
       if (res.data.success) {
@@ -44,8 +58,8 @@ const AdminTasks = () => {
         setFormData({ title: '', description: '', assignedTo: '', priority: 'Medium', dueDate: '' });
         fetchTasks();
       }
-    } catch (e) {
-      alert('Failed to assign task');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign task');
     }
   };
 
@@ -196,6 +210,7 @@ const AdminTasks = () => {
                   <input
                     type="date"
                     className="form-control"
+                    min={todayStr}
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                     required

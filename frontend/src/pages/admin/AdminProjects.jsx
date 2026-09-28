@@ -35,8 +35,22 @@ const AdminProjects = () => {
     });
   }, []);
 
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getTodayDateStr();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.deadline < todayStr) {
+      alert('Deadline date cannot be in the past. Please select today or a future date.');
+      return;
+    }
+
     try {
       const res = await api.post('/projects', formData);
       if (res.data.success) {
@@ -45,7 +59,7 @@ const AdminProjects = () => {
         fetchProjects();
       }
     } catch (err) {
-      alert('Failed to create project');
+      alert(err.response?.data?.message || 'Failed to create project');
     }
   };
 
@@ -141,6 +155,7 @@ const AdminProjects = () => {
                   <input
                     type="date"
                     className="form-control"
+                    min={todayStr}
                     value={formData.deadline}
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                     required

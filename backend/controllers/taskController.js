@@ -15,6 +15,27 @@ const createTask = async (req, res) => {
       });
     }
 
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid due date format.',
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const checkDue = new Date(dueDate);
+    checkDue.setHours(0, 0, 0, 0);
+
+    if (checkDue < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Due date cannot be in the past. Please select today or a future date.',
+      });
+    }
+
     const task = await Task.create({
       title,
       description: description || '',
@@ -119,6 +140,28 @@ const updateTask = async (req, res) => {
       if (req.body.status) task.status = req.body.status;
       await task.save();
     } else {
+      if (req.body.dueDate) {
+        const checkDue = new Date(req.body.dueDate);
+        if (isNaN(checkDue.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid due date format.',
+          });
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        checkDue.setHours(0, 0, 0, 0);
+
+        const prevDueStr = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+        const newDueStr = new Date(req.body.dueDate).toISOString().split('T')[0];
+        if (newDueStr !== prevDueStr && checkDue < today) {
+          return res.status(400).json({
+            success: false,
+            message: 'Due date cannot be in the past. Please select today or a future date.',
+          });
+        }
+      }
+
       // Admin and Manager can update all fields & feedback
       const allowedUpdates = [
         'title',
