@@ -196,6 +196,9 @@ const ManagerDashboard = () => {
   const hasCheckedIn = Boolean(todayAttendance && todayAttendance.checkIn);
   const hasCheckedOut = Boolean(todayAttendance && todayAttendance.checkOut);
 
+  const rawName = user?.name || user?.username || 'Manager';
+  const userName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
   return (
     <div>
       {/* Alert Punch Feedback Messages */}
@@ -286,22 +289,17 @@ const ManagerDashboard = () => {
             </div>
 
             <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px', marginBottom: '2px' }}>
-              {hasCheckedOut
-                ? 'Shift Finished for Today'
-                : hasCheckedIn
-                ? 'Currently On Duty (Checked In)'
-                : 'Ready to Start Your Manager Shift?'}
+              Welcome to {userName}
             </h2>
 
             <p style={{ fontSize: '13px', color: '#c7d2fe', margin: '4px 0 0 0' }}>
-              {hasCheckedIn && todayAttendance?.checkIn
-                ? `Clocked in at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              {hasCheckedOut
+                ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
+                : hasCheckedIn && todayAttendance?.checkIn
+                ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
                 : 'Log your arrival time accurately with verified photo & authorized workplace location'}
               {hasCheckedOut && todayAttendance?.checkOut
                 ? ` • Clocked out at ${new Date(todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : ''}
-              {hasCheckedOut && todayAttendance?.workingHours
-                ? ` • Total: ${todayAttendance.workingHours} hrs worked`
                 : ''}
             </p>
           </div>
