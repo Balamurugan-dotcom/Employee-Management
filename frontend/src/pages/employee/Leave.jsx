@@ -33,10 +33,36 @@ const Leave = () => {
     fetchLeaves();
   }, []);
 
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getTodayDateStr();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setNotification({ type: '', text: '' });
+
+    if (formData.startDate < todayStr) {
+      setNotification({
+        type: 'danger',
+        text: 'Start date cannot be in the past. Please select today or a future date.',
+      });
+      return;
+    }
+
+    if (formData.endDate < formData.startDate) {
+      setNotification({
+        type: 'danger',
+        text: 'End date cannot be earlier than start date.',
+      });
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
       const res = await api.post('/leaves', formData);
@@ -169,8 +195,16 @@ const Leave = () => {
                   <input
                     type="date"
                     className="form-control"
+                    min={todayStr}
                     value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: newStart,
+                        endDate: prev.endDate && prev.endDate < newStart ? newStart : prev.endDate,
+                      }));
+                    }}
                     required
                   />
                 </div>
@@ -180,6 +214,7 @@ const Leave = () => {
                   <input
                     type="date"
                     className="form-control"
+                    min={formData.startDate || todayStr}
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     required

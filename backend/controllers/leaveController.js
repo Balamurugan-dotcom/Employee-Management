@@ -15,6 +15,37 @@ const applyLeave = async (req, res) => {
       });
     }
 
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid start date or end date format.',
+      });
+    }
+
+    // Compare start date with beginning of today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const checkStart = new Date(startDate);
+    checkStart.setHours(0, 0, 0, 0);
+
+    if (checkStart < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date cannot be in the past. Please select today or a future date.',
+      });
+    }
+
+    if (end < start) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be earlier than start date.',
+      });
+    }
+
     let employee = req.employee;
     if (!employee) {
       employee = await Employee.findOne({
