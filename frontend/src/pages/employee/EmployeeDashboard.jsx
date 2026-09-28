@@ -474,7 +474,6 @@ const EmployeeDashboard = () => {
           color={hasCheckedIn ? '#10b981' : '#f59e0b'}
           bg={hasCheckedIn ? '#ecfdf5' : '#fffbeb'}
           subtitle={hasCheckedIn ? 'Logged for today' : 'Action needed'}
-          to="/employee/attendance"
         />
         <DashboardCard
           title="Working Days"
