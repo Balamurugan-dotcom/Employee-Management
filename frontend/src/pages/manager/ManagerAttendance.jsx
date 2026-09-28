@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { Calendar, Clock, CheckCircle2, Filter } from 'lucide-react';
 
 const ManagerAttendance = () => {
@@ -153,9 +154,10 @@ const ManagerAttendance = () => {
                   <tr key={r._id}>
                     <td>
                       <div className="user-cell">
-                        <img
-                          src={r.employee?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${r.employee?.name}`}
-                          alt=""
+                        <UserAvatar
+                          src={r.employee?.profileImage}
+                          name={r.employee?.name}
+                          size={36}
                         />
                         <div className="user-cell-meta">
                           <div className="name">{r.employee?.name}</div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import DashboardCard from '../../components/DashboardCard';
 import {
   MonthlyAttendanceChart,
@@ -181,9 +182,10 @@ const AdminDashboard = () => {
                     <tr key={l._id}>
                       <td>
                         <div className="user-cell">
-                          <img
-                            src={l.employee?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${l.employee?.name}`}
-                            alt=""
+                          <UserAvatar
+                            src={l.employee?.profileImage}
+                            name={l.employee?.name || 'Staff'}
+                            size={36}
                           />
                           <div className="user-cell-meta">
                             <div className="name">{l.employee?.name || 'Staff'}</div>
@@ -239,7 +241,11 @@ const AdminDashboard = () => {
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{emp.employeeId}</td>
                       <td>
                         <div className="user-cell">
-                          <img src={emp.profileImage} alt="" />
+                          <UserAvatar
+                            src={emp.profileImage}
+                            name={emp.name}
+                            size={36}
+                          />
                           <div className="user-cell-meta">
                             <div className="name">{emp.name}</div>
                             <div className="email">{emp.email}</div>

@@ -217,11 +217,29 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
 
         {/* User Mini Profile Badge */}
         <div className="nav-user-capsule">
-          <img
-            src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Staff'}`}
-            alt=""
-            className="nav-user-img"
-          />
+          {user?.avatar && !user.avatar.includes('dicebear.com') ? (
+            <img
+              src={user.avatar}
+              alt=""
+              className="nav-user-img"
+            />
+          ) : (
+            <div
+              className="nav-user-img"
+              style={{
+                background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: '14px',
+                borderRadius: '50%',
+              }}
+            >
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          )}
           <div className="nav-user-meta">
             <span className="nav-user-name">{user?.name?.split(' ')[0] || 'User'}</span>
             <span className="nav-user-role">{user?.role?.toUpperCase()}</span>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { Users, Mail, Phone, Calendar, Award, Eye, MessageSquare, CheckCircle } from 'lucide-react';
 
 const MyTeam = () => {
@@ -69,10 +70,11 @@ const MyTeam = () => {
           team.map((emp) => (
             <div key={emp._id} className="table-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <img
-                  src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                  alt=""
-                  style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #4f46e5' }}
+                <UserAvatar
+                  src={emp.profileImage}
+                  name={emp.name}
+                  size={50}
+                  border="2px solid #4f46e5"
                 />
                 <div>
                   <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{emp.name}</h3>
@@ -132,10 +134,12 @@ const MyTeam = () => {
             </div>
             <div className="modal-body">
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <img
+                <UserAvatar
                   src={selectedMember.profileImage}
-                  alt=""
-                  style={{ width: '70px', height: '70px', borderRadius: '50%', objectFit: 'cover' }}
+                  name={selectedMember.name}
+                  size={70}
+                  fontSize="26px"
+                  style={{ margin: '0 auto' }}
                 />
                 <h3 style={{ marginTop: '10px' }}>{selectedMember.name}</h3>
                 <p style={{ color: '#64748b', fontSize: '13px' }}>{selectedMember.designation} • {selectedMember.department}</p>

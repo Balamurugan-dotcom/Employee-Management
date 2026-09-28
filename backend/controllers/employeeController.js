@@ -293,7 +293,7 @@ const createEmployee = async (req, res) => {
       managerName,
       joiningDate: joiningDate || Date.now(),
       salary: salary || 50000,
-      profileImage: profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+      profileImage: profileImage || '',
       status: 'Active',
     });
 

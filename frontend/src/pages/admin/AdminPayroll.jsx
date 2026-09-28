@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { CreditCard, Plus, DollarSign, CheckCircle } from 'lucide-react';
 
 const AdminPayroll = () => {
@@ -93,9 +94,10 @@ const AdminPayroll = () => {
                   <tr key={p._id}>
                     <td>
                       <div className="user-cell">
-                        <img
-                          src={p.employee?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.employee?.name}`}
-                          alt=""
+                        <UserAvatar
+                          src={p.employee?.profileImage}
+                          name={p.employee?.name}
+                          size={36}
                         />
                         <div className="user-cell-meta">
                           <div className="name">{p.employee?.name}</div>

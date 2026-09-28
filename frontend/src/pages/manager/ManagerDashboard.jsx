@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import DashboardCard from '../../components/DashboardCard';
 import {
   Users,
@@ -509,9 +510,10 @@ const ManagerDashboard = () => {
                     <tr key={l._id}>
                       <td>
                         <div className="user-cell">
-                          <img
-                            src={l.employee?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${l.employee?.name}`}
-                            alt=""
+                          <UserAvatar
+                            src={l.employee?.profileImage}
+                            name={l.employee?.name}
+                            size={36}
                           />
                           <div className="user-cell-meta">
                             <div className="name">{l.employee?.name}</div>
@@ -582,9 +584,10 @@ const ManagerDashboard = () => {
                       </td>
                       <td>
                         <div className="user-cell">
-                          <img
-                            src={t.assignedTo?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.assignedTo?.name}`}
-                            alt=""
+                          <UserAvatar
+                            src={t.assignedTo?.profileImage}
+                            name={t.assignedTo?.name}
+                            size={36}
                           />
                           <div className="user-cell-meta">
                             <div className="name">{t.assignedTo?.name}</div>

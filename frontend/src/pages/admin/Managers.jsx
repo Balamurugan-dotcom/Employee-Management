@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import {
   UserCheck,
   Mail,
@@ -352,36 +353,14 @@ const Managers = () => {
             >
               {/* Card Header: Avatar + Name + Edit/Delete */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                {m.profileImage ? (
-                  <img
-                    src={m.profileImage}
-                    alt={m.name}
-                    style={{
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '12px',
-                      objectFit: 'cover',
-                      border: '2px solid #e2e8f0',
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <UserCheck size={26} />
-                  </div>
-                )}
+                <UserAvatar
+                  src={m.profileImage}
+                  name={m.name}
+                  size={52}
+                  borderRadius="12px"
+                  background="linear-gradient(135deg, #0ea5e9, #4f46e5)"
+                  fontSize="20px"
+                />
 
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <h3
@@ -576,17 +555,14 @@ const Managers = () => {
             {/* Header */}
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {viewMgr.profileImage ? (
-                  <img
-                    src={viewMgr.profileImage}
-                    alt={viewMgr.name}
-                    style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', border: '2px solid #e2e8f0' }}
-                  />
-                ) : (
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                    <UserCheck size={24} />
-                  </div>
-                )}
+                <UserAvatar
+                  src={viewMgr.profileImage}
+                  name={viewMgr.name}
+                  size={48}
+                  borderRadius="12px"
+                  background="linear-gradient(135deg, #0ea5e9, #4f46e5)"
+                  fontSize="18px"
+                />
                 <div>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>{viewMgr.name}</h3>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '3px', flexWrap: 'wrap' }}>

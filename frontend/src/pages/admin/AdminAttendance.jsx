@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { Calendar, Filter, Clock, Camera, X } from 'lucide-react';
 
 const AdminAttendance = () => {
@@ -102,27 +103,17 @@ const AdminAttendance = () => {
               ) : (
                 records.map((r) => {
                   const checkInPhoto = r.faceImage || r.employee?.lastCheckInPhoto;
-                  const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(r.employee?.name || 'Staff')}`;
-                  const employeeAvatar = r.employee?.profileImage || fallbackAvatar;
 
                   return (
                     <tr key={r._id}>
                       <td>
                         <div className="user-cell">
-                          <img
-                            src={employeeAvatar}
-                            alt=""
-                            onError={(e) => {
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = fallbackAvatar;
-                            }}
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: '1px solid #e2e8f0',
-                            }}
+                          <UserAvatar
+                            src={r.employee?.profileImage}
+                            name={r.employee?.name}
+                            size={36}
+                            background="linear-gradient(135deg, #0ea5e9, #3b82f6)"
+                            fontSize="13px"
                           />
                           <div className="user-cell-meta">
                             <div className="name">{r.employee?.name}</div>

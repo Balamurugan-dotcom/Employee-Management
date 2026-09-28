@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { CheckSquare, Plus, Trash2, Edit2, Filter } from 'lucide-react';
 
 const AdminTasks = () => {
@@ -107,9 +108,10 @@ const AdminTasks = () => {
                     </td>
                     <td>
                       <div className="user-cell">
-                        <img
-                          src={t.assignedTo?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${t.assignedTo?.name}`}
-                          alt=""
+                        <UserAvatar
+                          src={t.assignedTo?.profileImage}
+                          name={t.assignedTo?.name}
+                          size={36}
                         />
                         <div className="user-cell-meta">
                           <div className="name">{t.assignedTo?.name}</div>

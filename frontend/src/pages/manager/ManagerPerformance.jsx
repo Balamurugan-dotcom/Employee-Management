@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import { Award, Star, MessageSquare } from 'lucide-react';
 
 const ManagerPerformance = () => {
@@ -31,10 +32,10 @@ const ManagerPerformance = () => {
           team.map((emp) => (
             <div key={emp._id} className="table-card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                <img
-                  src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                  alt=""
-                  style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                <UserAvatar
+                  src={emp.profileImage}
+                  name={emp.name}
+                  size={48}
                 />
                 <div>
                   <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{emp.name}</h3>

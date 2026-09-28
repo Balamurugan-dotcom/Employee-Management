@@ -158,8 +158,7 @@ const ManagerProfile = () => {
     }
   };
 
-  const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Manager'}`;
-  const displayAvatar = profileImage || defaultAvatar;
+  const hasCustomPhoto = profileImage && !profileImage.includes('dicebear.com');
 
   if (loading) return <div className="spinner" style={{ margin: '60px auto' }}></div>;
 
@@ -192,24 +191,51 @@ const ManagerProfile = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {/* Avatar with Interactive Camera Overlay */}
           <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
-            <img
-              src={displayAvatar}
-              alt={user?.name || 'Profile'}
-              onClick={() => fileInputRef.current?.click()}
-              title="Click to change profile photo"
-              style={{
-                width: '84px',
-                height: '84px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: hasNewPhoto ? '3px solid #10b981' : '3px solid #4f46e5',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-            />
+            {hasCustomPhoto ? (
+              <img
+                src={profileImage}
+                alt={user?.name || 'Profile'}
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to change profile photo"
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: hasNewPhoto ? '3px solid #10b981' : '3px solid #4f46e5',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              />
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to upload profile photo"
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #0ea5e9, #4f46e5)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '32px',
+                  border: hasNewPhoto ? '3px solid #10b981' : '3px solid #4f46e5',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {(user?.name || 'M').charAt(0).toUpperCase()}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}

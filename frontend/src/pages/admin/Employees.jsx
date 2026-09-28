@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import UserAvatar from '../../components/UserAvatar';
 import {
   Search,
   Plus,
@@ -328,16 +329,10 @@ const Employees = () => {
 
                         {/* Separate Profile Avatar Column */}
                         <td>
-                          <img
-                            src={emp.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`}
-                            alt=""
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              border: '1px solid #e2e8f0',
-                            }}
+                          <UserAvatar
+                            src={emp.profileImage}
+                            name={emp.name}
+                            size={36}
                           />
                         </td>
 
@@ -772,27 +767,18 @@ const Employees = () => {
             <div className="modal-body">
               {(() => {
                 const checkInPhoto = selectedEmp.todayAttendance?.faceImage || selectedEmp.lastCheckInPhoto;
-                const fallbackAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedEmp.name || 'Staff')}`;
-                const profilePhoto = selectedEmp.profileImage || fallbackAvatar;
 
                 return (
                   <>
                     <div style={{ textAlign: 'center', marginBottom: '18px' }}>
                       <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <img
-                          src={profilePhoto}
-                          alt={selectedEmp.name}
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = fallbackAvatar;
-                          }}
-                          style={{
-                            width: '88px',
-                            height: '88px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: '3px solid #4f46e5',
-                          }}
+                        <UserAvatar
+                          src={selectedEmp.profileImage}
+                          name={selectedEmp.name}
+                          size={88}
+                          border="3px solid #4f46e5"
+                          fontSize="32px"
+                          fontWeight={800}
                         />
                       </div>
                       <h3 style={{ marginTop: '10px', marginBottom: '2px' }}>{selectedEmp.name}</h3>
