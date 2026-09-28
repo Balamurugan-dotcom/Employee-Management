@@ -119,6 +119,7 @@ const createOrUpdateReport = async (req, res) => {
     const {
       date,
       title,
+      description,
       tasksCompleted,
       tasksPending,
       hoursWorked,
@@ -137,6 +138,8 @@ const createOrUpdateReport = async (req, res) => {
       });
     }
 
+    const reportDescription = description !== undefined ? String(description).trim() : '';
+
     // Process tasks lists if provided as string or array
     const parseTasks = (val) => {
       if (Array.isArray(val)) return val.map((s) => String(s).trim()).filter(Boolean);
@@ -152,6 +155,11 @@ const createOrUpdateReport = async (req, res) => {
     const tasksCompletedArr = parseTasks(tasksCompleted);
     const tasksPendingArr = parseTasks(tasksPending);
 
+    // If description provided and tasksCompleted empty, fallback to lines of description
+    if (tasksCompletedArr.length === 0 && reportDescription) {
+      tasksCompletedArr.push(...parseTasks(reportDescription));
+    }
+
     // Check if report already exists for this employee on this date
     let report = await DailyReport.findOne({
       employee: employee._id,
@@ -161,6 +169,7 @@ const createOrUpdateReport = async (req, res) => {
     if (report) {
       // Update existing entity
       report.title = title.trim();
+      if (description !== undefined) report.description = reportDescription;
       report.tasksCompleted = tasksCompletedArr;
       report.tasksPending = tasksPendingArr;
       if (hoursWorked !== undefined) report.hoursWorked = Number(hoursWorked) || 8;
@@ -187,6 +196,7 @@ const createOrUpdateReport = async (req, res) => {
       department: employee.department || 'General',
       date: reportDate,
       title: title.trim(),
+      description: reportDescription,
       tasksCompleted: tasksCompletedArr,
       tasksPending: tasksPendingArr,
       hoursWorked: hoursWorked !== undefined ? Number(hoursWorked) || 8 : 8,
@@ -262,6 +272,7 @@ const updateReport = async (req, res) => {
 
     const {
       title,
+      description,
       tasksCompleted,
       tasksPending,
       hoursWorked,
@@ -273,6 +284,12 @@ const updateReport = async (req, res) => {
     } = req.body;
 
     if (title) report.title = title.trim();
+    if (description !== undefined) {
+      report.description = String(description).trim();
+      if (tasksCompleted === undefined && report.description) {
+        report.tasksCompleted = report.description.split('\n').map((s) => s.trim()).filter(Boolean);
+      }
+    }
     if (tasksCompleted !== undefined) {
       report.tasksCompleted = Array.isArray(tasksCompleted)
         ? tasksCompleted

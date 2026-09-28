@@ -35,6 +35,11 @@ const dailyReportSchema = new mongoose.Schema(
       required: [true, 'Please provide a title or summary for the daily report.'],
       trim: true,
     },
+    description: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     tasksCompleted: {
       type: [String],
       default: [],

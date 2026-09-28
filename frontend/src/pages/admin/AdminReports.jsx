@@ -492,21 +492,33 @@ const AdminReports = () => {
                 </div>
               </div>
 
-              {/* Tasks Completed */}
-              <div style={{ marginBottom: '16px' }}>
-                <strong style={{ display: 'block', fontSize: '12px', color: '#059669', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Tasks Completed Today ({selectedReport.tasksCompleted?.length || 0})
-                </strong>
-                {selectedReport.tasksCompleted?.length ? (
-                  <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13.5px', color: '#334155' }}>
-                    {selectedReport.tasksCompleted.map((t, idx) => (
-                      <li key={idx} style={{ marginBottom: '4px' }}>{t}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>No tasks listed.</p>
-                )}
-              </div>
+              {/* Work Description / Deliverables */}
+              {selectedReport.description ? (
+                <div style={{ marginBottom: '16px' }}>
+                  <strong style={{ display: 'block', fontSize: '12px', color: '#4f46e5', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Work Description & Deliverables
+                  </strong>
+                  <div style={{ fontSize: '13.5px', color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6, background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {selectedReport.description}
+                  </div>
+                </div>
+              ) : (
+                /* Tasks Completed (Legacy fallback) */
+                <div style={{ marginBottom: '16px' }}>
+                  <strong style={{ display: 'block', fontSize: '12px', color: '#059669', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Tasks Completed Today ({selectedReport.tasksCompleted?.length || 0})
+                  </strong>
+                  {selectedReport.tasksCompleted?.length ? (
+                    <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13.5px', color: '#334155' }}>
+                      {selectedReport.tasksCompleted.map((t, idx) => (
+                        <li key={idx} style={{ marginBottom: '4px' }}>{t}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>No tasks listed.</p>
+                  )}
+                </div>
+              )}
 
               {/* Tasks Pending */}
               {selectedReport.tasksPending?.length > 0 && (

@@ -70,12 +70,8 @@ const EmployeeReports = () => {
     id: null,
     date: getTodayStr(),
     title: '',
-    tasksCompleted: '',
-    tasksPending: '',
+    description: '',
     hoursWorked: 8,
-    blockers: 'None',
-    planForTomorrow: '',
-    additionalNotes: '',
     status: 'Submitted',
   });
 
@@ -122,12 +118,8 @@ const EmployeeReports = () => {
       id: null,
       date: dateToUse,
       title: `Daily Work Progress Report - ${formatDisplayDate(dateToUse)}`,
-      tasksCompleted: '',
-      tasksPending: '',
+      description: '',
       hoursWorked: 8,
-      blockers: 'None',
-      planForTomorrow: '',
-      additionalNotes: '',
       status: 'Submitted',
     });
     setModalMode('create');
@@ -135,20 +127,18 @@ const EmployeeReports = () => {
   };
 
   const handleOpenEditModal = (report) => {
+    const desc =
+      report.description ||
+      (Array.isArray(report.tasksCompleted) && report.tasksCompleted.length > 0
+        ? report.tasksCompleted.join('\n')
+        : report.tasksCompleted || '');
+
     setFormData({
       id: report._id,
       date: report.date,
       title: report.title || '',
-      tasksCompleted: Array.isArray(report.tasksCompleted)
-        ? report.tasksCompleted.join('\n')
-        : report.tasksCompleted || '',
-      tasksPending: Array.isArray(report.tasksPending)
-        ? report.tasksPending.join('\n')
-        : report.tasksPending || '',
+      description: desc,
       hoursWorked: report.hoursWorked ?? 8,
-      blockers: report.blockers || 'None',
-      planForTomorrow: report.planForTomorrow || '',
-      additionalNotes: report.additionalNotes || '',
       status: report.status || 'Submitted',
     });
     setModalMode('edit');
@@ -164,12 +154,8 @@ const EmployeeReports = () => {
       const payload = {
         date: formData.date,
         title: formData.title,
-        tasksCompleted: formData.tasksCompleted,
-        tasksPending: formData.tasksPending,
+        description: formData.description,
         hoursWorked: Number(formData.hoursWorked) || 8,
-        blockers: formData.blockers,
-        planForTomorrow: formData.planForTomorrow,
-        additionalNotes: formData.additionalNotes,
         status: formData.status,
       };
 
@@ -224,11 +210,12 @@ const EmployeeReports = () => {
     const q = searchQuery.toLowerCase();
     const titleMatch = r.title?.toLowerCase().includes(q);
     const dateMatch = r.date?.includes(q);
+    const descMatch = r.description?.toLowerCase().includes(q);
     const tasksMatch =
       Array.isArray(r.tasksCompleted) &&
       r.tasksCompleted.some((t) => t.toLowerCase().includes(q));
     const blockersMatch = r.blockers?.toLowerCase().includes(q);
-    return titleMatch || dateMatch || tasksMatch || blockersMatch;
+    return titleMatch || dateMatch || descMatch || tasksMatch || blockersMatch;
   });
 
   // Calculate quick summary metrics
@@ -714,7 +701,7 @@ const EmployeeReports = () => {
                           color: '#4338ca',
                         }}
                       >
-                        📋 {completedList.length} deliverables
+                        {report.description ? '📝 Work Logged' : `📋 ${completedList.length} deliverables`}
                       </span>
 
                       <span
@@ -767,121 +754,42 @@ const EmployeeReports = () => {
                   </div>
                 </div>
 
-                {/* Report Content Grid */}
+                {/* Report Content */}
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                    gap: '16px',
                     background: '#f8fafc',
-                    padding: '16px',
+                    padding: '16px 18px',
                     borderRadius: '12px',
                     border: '1px solid #f1f5f9',
                   }}
                 >
-                  {/* Tasks Completed */}
-                  <div>
-                    <h4
-                      style={{
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        color: '#059669',
-                        textTransform: 'uppercase',
-                        margin: '0 0 8px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <CheckCircle2 size={14} />
-                      Accomplished Deliverables ({completedList.length})
-                    </h4>
-                    {completedList.length > 0 ? (
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#334155' }}>
-                        {completedList.map((task, idx) => (
-                          <li key={idx} style={{ marginBottom: '4px' }}>
-                            {task}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span style={{ fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
-                        No specific deliverables listed
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Tomorrow's Plan & Pending */}
-                  <div>
-                    <h4
-                      style={{
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        color: '#4338ca',
-                        textTransform: 'uppercase',
-                        margin: '0 0 8px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <TrendingUp size={14} />
-                      Next Shift Priorities
-                    </h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: 1.4 }}>
-                      {report.planForTomorrow || 'Standard continuation of sprint deliverables.'}
-                    </p>
-
-                    {pendingList.length > 0 && (
-                      <div style={{ marginTop: '8px' }}>
-                        <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b' }}>
-                          In-progress:
-                        </span>
-                        <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px', fontSize: '12.5px', color: '#475569' }}>
-                          {pendingList.map((task, idx) => (
-                            <li key={idx}>{task}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Blockers / Notes */}
-                  <div>
-                    <h4
-                      style={{
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        color: report.blockers && report.blockers !== 'None' ? '#dc2626' : '#64748b',
-                        textTransform: 'uppercase',
-                        margin: '0 0 8px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <AlertTriangle size={14} />
-                      Blockers & Challenges
-                    </h4>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '13px',
-                        color: report.blockers && report.blockers !== 'None' ? '#b91c1c' : '#64748b',
-                        fontWeight: report.blockers && report.blockers !== 'None' ? 600 : 400,
-                      }}
-                    >
-                      {report.blockers || 'None'}
-                    </p>
-
-                    {report.additionalNotes && (
-                      <div style={{ marginTop: '8px' }}>
-                        <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748b' }}>Notes:</span>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: '#475569' }}>
-                          {report.additionalNotes}
-                        </p>
-                      </div>
-                    )}
+                  <h4
+                    style={{
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#4f46e5',
+                      textTransform: 'uppercase',
+                      margin: '0 0 8px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <FileText size={14} />
+                    Work Description & Deliverables
+                  </h4>
+                  <div
+                    style={{
+                      fontSize: '13.5px',
+                      color: '#334155',
+                      lineHeight: '1.6',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {report.description ||
+                      (completedList.length > 0
+                        ? completedList.join('\n')
+                        : 'No description provided')}
                   </div>
                 </div>
               </div>
@@ -1024,61 +932,20 @@ const EmployeeReports = () => {
                     />
                   </div>
 
-                  {/* Tasks Completed (Line by line) */}
+                  {/* Work Description Input Box */}
                   <div className="form-group col-span-2">
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckCircle2 size={14} color="#10b981" />
-                      <span>Accomplished Deliverables (One per line)</span>
+                      <FileText size={14} color="#4f46e5" />
+                      <span>Work Description *</span>
                     </label>
                     <textarea
                       className="form-control"
-                      rows="3"
-                      value={formData.tasksCompleted}
-                      onChange={(e) => setFormData({ ...formData, tasksCompleted: e.target.value })}
-                      placeholder="Completed user authentication module&#10;Tested facial recognition with device webcam&#10;Fixed workplace geofence radius calculation"
+                      rows="6"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Describe what you worked on, tasks completed, progress made, and key updates for today..."
                       required
-                    />
-                  </div>
-
-                  {/* Tasks Pending / In-progress */}
-                  <div className="form-group col-span-2">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <TrendingUp size={14} color="#3b82f6" />
-                      <span>In-Progress / Ongoing Deliverables (Optional)</span>
-                    </label>
-                    <textarea
-                      className="form-control"
-                      rows="2"
-                      value={formData.tasksPending}
-                      onChange={(e) => setFormData({ ...formData, tasksPending: e.target.value })}
-                      placeholder="Writing automated integration tests for check-in API"
-                    />
-                  </div>
-
-                  {/* Blockers */}
-                  <div className="form-group col-span-2">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <AlertTriangle size={14} color="#f59e0b" />
-                      <span>Blockers / Challenges</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.blockers}
-                      onChange={(e) => setFormData({ ...formData, blockers: e.target.value })}
-                      placeholder="None (or state any blocker)"
-                    />
-                  </div>
-
-                  {/* Plan for Tomorrow */}
-                  <div className="form-group col-span-2">
-                    <label>Plan for Next Shift / Tomorrow</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.planForTomorrow}
-                      onChange={(e) => setFormData({ ...formData, planForTomorrow: e.target.value })}
-                      placeholder="e.g. Conduct QA verification on staging server"
+                      style={{ fontSize: '13.5px', lineHeight: '1.5' }}
                     />
                   </div>
                 </div>
