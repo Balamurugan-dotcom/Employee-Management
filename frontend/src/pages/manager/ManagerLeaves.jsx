@@ -1,10 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { Check, X, Calendar } from 'lucide-react';
 
 const ManagerLeaves = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'All';
+
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sync state if query param changes
+  useEffect(() => {
+    const qStatus = searchParams.get('status');
+    if (qStatus && qStatus !== statusFilter) {
+      setStatusFilter(qStatus);
+    }
+  }, [searchParams]);
+
+  const handleStatusChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    if (newStatus === 'All') {
+      searchParams.delete('status');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ status: newStatus });
+    }
+  };
 
   const fetchLeaves = async () => {
     try {
@@ -43,13 +66,70 @@ const ManagerLeaves = () => {
     }
   };
 
+  const filteredLeaves = leaves.filter((l) => {
+    if (statusFilter === 'All') return true;
+    return l.status?.toLowerCase() === statusFilter.toLowerCase();
+  });
+
+  const counts = {
+    All: leaves.length,
+    Pending: leaves.filter((l) => l.status === 'Pending').length,
+    Approved: leaves.filter((l) => l.status === 'Approved').length,
+    Rejected: leaves.filter((l) => l.status === 'Rejected').length,
+  };
+
   return (
     <div>
       <div className="table-card">
-        <div className="table-toolbar">
+        <div className="table-toolbar" style={{ flexWrap: 'wrap', gap: '14px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Team Leave Requests</h2>
             <p style={{ fontSize: '13px', color: '#64748b' }}>Authorize or reject planned team absence</p>
+          </div>
+
+          {/* Status Filter Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'All', value: 'All', count: counts.All },
+              { label: 'Pending Review', value: 'Pending', count: counts.Pending },
+              { label: 'Approved', value: 'Approved', count: counts.Approved },
+              { label: 'Rejected', value: 'Rejected', count: counts.Rejected },
+            ].map((tab) => {
+              const active = statusFilter.toLowerCase() === tab.value.toLowerCase();
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => handleStatusChange(tab.value)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: active ? '#4f46e5' : '#f1f5f9',
+                    color: active ? '#ffffff' : '#64748b',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -72,14 +152,14 @@ const ManagerLeaves = () => {
                     <div className="spinner" style={{ margin: '0 auto' }}></div>
                   </td>
                 </tr>
-              ) : leaves.length === 0 ? (
+              ) : filteredLeaves.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-                    No pending leave requests from your team.
+                    No {statusFilter !== 'All' ? `"${statusFilter}"` : ''} leave requests found from your team.
                   </td>
                 </tr>
               ) : (
-                leaves.map((l) => (
+                filteredLeaves.map((l) => (
                   <tr key={l._id}>
                     <td>
                       <div className="user-cell">

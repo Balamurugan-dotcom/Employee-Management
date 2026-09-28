@@ -474,6 +474,7 @@ const EmployeeDashboard = () => {
           color={hasCheckedIn ? '#10b981' : '#f59e0b'}
           bg={hasCheckedIn ? '#ecfdf5' : '#fffbeb'}
           subtitle={hasCheckedIn ? 'Logged for today' : 'Action needed'}
+          to="/employee/attendance"
         />
         <DashboardCard
           title="Working Days"
@@ -482,6 +483,7 @@ const EmployeeDashboard = () => {
           color="#4f46e5"
           bg="#eef2ff"
           subtitle="This billing cycle"
+          to="/employee/attendance"
         />
         <DashboardCard
           title="Leave Balance"
@@ -490,6 +492,7 @@ const EmployeeDashboard = () => {
           color="#0ea5e9"
           bg="#f0f9ff"
           subtitle="Remaining paid quota"
+          to="/employee/leave"
         />
         <DashboardCard
           title="Tasks Assigned"
@@ -498,6 +501,7 @@ const EmployeeDashboard = () => {
           color="#8b5cf6"
           bg="#f5f3ff"
           subtitle="Allocated to you"
+          to="/employee/tasks"
         />
         <DashboardCard
           title="Tasks Completed"
@@ -506,6 +510,7 @@ const EmployeeDashboard = () => {
           color="#10b981"
           bg="#ecfdf5"
           subtitle="Delivered successfully"
+          to="/employee/tasks"
         />
         <DashboardCard
           title="Pending Tasks"
@@ -514,6 +519,7 @@ const EmployeeDashboard = () => {
           color="#ef4444"
           bg="#fef2f2"
           subtitle="In pipeline"
+          to="/employee/tasks"
         />
       </div>
 

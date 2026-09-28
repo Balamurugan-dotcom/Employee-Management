@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { CheckSquare, Plus, Trash2, Edit3, MessageSquare } from 'lucide-react';
 
 const ManagerTasks = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'All';
+
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [tasks, setTasks] = useState([]);
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +21,24 @@ const ManagerTasks = () => {
     dueDate: '',
     feedback: '',
   });
+
+  // Sync state if query param changes
+  useEffect(() => {
+    const qStatus = searchParams.get('status');
+    if (qStatus && qStatus !== statusFilter) {
+      setStatusFilter(qStatus);
+    }
+  }, [searchParams]);
+
+  const handleStatusChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    if (newStatus === 'All') {
+      searchParams.delete('status');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ status: newStatus });
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -95,14 +118,72 @@ const ManagerTasks = () => {
     }
   };
 
+  const filteredTasks = tasks.filter((t) => {
+    if (statusFilter === 'All') return true;
+    if (statusFilter === 'Active') return t.status !== 'Completed';
+    if (statusFilter === 'Completed') return t.status === 'Completed';
+    return t.status?.toLowerCase() === statusFilter.toLowerCase();
+  });
+
+  const counts = {
+    All: tasks.length,
+    Active: tasks.filter((t) => t.status !== 'Completed').length,
+    Completed: tasks.filter((t) => t.status === 'Completed').length,
+  };
+
   return (
     <div>
       <div className="table-card">
-        <div className="table-toolbar">
+        <div className="table-toolbar" style={{ flexWrap: 'wrap', gap: '14px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Team Task Delegation</h2>
             <p style={{ fontSize: '13px', color: '#64748b' }}>Assign deliverables and provide actionable review notes</p>
           </div>
+
+          {/* Task Status Filter Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'All Tasks', value: 'All', count: counts.All },
+              { label: 'Active Tasks', value: 'Active', count: counts.Active },
+              { label: 'Completed', value: 'Completed', count: counts.Completed },
+            ].map((tab) => {
+              const active = statusFilter.toLowerCase() === tab.value.toLowerCase();
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => handleStatusChange(tab.value)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: active ? '#4f46e5' : '#f1f5f9',
+                    color: active ? '#ffffff' : '#64748b',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <button className="btn btn-primary" onClick={handleOpenCreate}>
             <Plus size={18} />
             <span>Create & Assign Task</span>
@@ -129,14 +210,14 @@ const ManagerTasks = () => {
                     <div className="spinner" style={{ margin: '0 auto' }}></div>
                   </td>
                 </tr>
-              ) : tasks.length === 0 ? (
+              ) : filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-                    No tasks assigned to your team yet.
+                    No {statusFilter !== 'All' ? `"${statusFilter}"` : ''} tasks found for your team.
                   </td>
                 </tr>
               ) : (
-                tasks.map((t) => (
+                filteredTasks.map((t) => (
                   <tr key={t._id}>
                     <td>
                       <strong style={{ color: '#1e293b' }}>{t.title}</strong>

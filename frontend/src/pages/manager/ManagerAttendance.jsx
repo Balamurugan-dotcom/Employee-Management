@@ -1,11 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
-import { Calendar, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, Filter } from 'lucide-react';
 
 const ManagerAttendance = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'All';
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sync state if query param changes
+  useEffect(() => {
+    const qStatus = searchParams.get('status');
+    if (qStatus && qStatus !== statusFilter) {
+      setStatusFilter(qStatus);
+    }
+  }, [searchParams]);
+
+  const handleStatusChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    if (newStatus === 'All') {
+      searchParams.delete('status');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ status: newStatus });
+    }
+  };
 
   const fetchAttendance = async () => {
     try {
@@ -25,10 +48,22 @@ const ManagerAttendance = () => {
     fetchAttendance();
   }, [date]);
 
+  const filteredRecords = records.filter((r) => {
+    if (statusFilter === 'All') return true;
+    return r.status?.toLowerCase() === statusFilter.toLowerCase();
+  });
+
+  const counts = {
+    All: records.length,
+    Present: records.filter((r) => r.status?.toLowerCase() === 'present').length,
+    HalfDay: records.filter((r) => r.status?.toLowerCase().includes('half')).length,
+    Absent: records.filter((r) => r.status?.toLowerCase() === 'absent').length,
+  };
+
   return (
     <div>
       <div className="table-card">
-        <div className="table-toolbar">
+        <div className="table-toolbar" style={{ flexWrap: 'wrap', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Calendar size={18} color="#4f46e5" />
             <input
@@ -38,8 +73,54 @@ const ManagerAttendance = () => {
               onChange={(e) => setDate(e.target.value)}
             />
           </div>
+
+          {/* Status Filter Tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'All', value: 'All', count: counts.All },
+              { label: 'Present', value: 'Present', count: counts.Present },
+              { label: 'Half Day', value: 'Half Day', count: counts.HalfDay },
+              { label: 'Absent', value: 'Absent', count: counts.Absent },
+            ].map((tab) => {
+              const active = statusFilter.toLowerCase() === tab.value.toLowerCase();
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => handleStatusChange(tab.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: active ? '#4f46e5' : '#f1f5f9',
+                    color: active ? '#ffffff' : '#64748b',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    style={{
+                      background: active ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div style={{ fontSize: '13px', color: '#64748b' }}>
-            Team Punches: {records.length} Recorded
+            Showing {filteredRecords.length} of {records.length} Punches
           </div>
         </div>
 
@@ -61,14 +142,14 @@ const ManagerAttendance = () => {
                     <div className="spinner" style={{ margin: '0 auto' }}></div>
                   </td>
                 </tr>
-              ) : records.length === 0 ? (
+              ) : filteredRecords.length === 0 ? (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-                    No team attendance recorded for {date}.
+                    No team attendance recorded matching "{statusFilter}" for {date}.
                   </td>
                 </tr>
               ) : (
-                records.map((r) => (
+                filteredRecords.map((r) => (
                   <tr key={r._id}>
                     <td>
                       <div className="user-cell">

@@ -427,6 +427,7 @@ const ManagerDashboard = () => {
           color="#4f46e5"
           bg="#eef2ff"
           subtitle="Assigned staff"
+          to="/manager/my-team"
         />
         <DashboardCard
           title="Present Today"
@@ -435,6 +436,7 @@ const ManagerDashboard = () => {
           color="#10b981"
           bg="#ecfdf5"
           subtitle="Checked in"
+          to="/manager/attendance?status=Present"
         />
         <DashboardCard
           title="Absent Today"
@@ -443,6 +445,7 @@ const ManagerDashboard = () => {
           color="#ef4444"
           bg="#fef2f2"
           subtitle="Not logged in"
+          to="/manager/attendance?status=Absent"
         />
         <DashboardCard
           title="Pending Leave Requests"
@@ -451,6 +454,7 @@ const ManagerDashboard = () => {
           color="#f59e0b"
           bg="#fffbeb"
           subtitle="Needs review"
+          to="/manager/leaves?status=Pending"
         />
         <DashboardCard
           title="Active Tasks"
@@ -459,6 +463,7 @@ const ManagerDashboard = () => {
           color="#0ea5e9"
           bg="#f0f9ff"
           subtitle="In progress / pending"
+          to="/manager/tasks?status=Active"
         />
         <DashboardCard
           title="Completed Tasks"
@@ -467,6 +472,7 @@ const ManagerDashboard = () => {
           color="#8b5cf6"
           bg="#f5f3ff"
           subtitle="Finished"
+          to="/manager/tasks?status=Completed"
         />
       </div>
 

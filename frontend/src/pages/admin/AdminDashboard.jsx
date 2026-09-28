@@ -64,6 +64,7 @@ const AdminDashboard = () => {
           color="#4f46e5"
           bg="#eef2ff"
           subtitle="Registered staff"
+          to="/admin/employees"
         />
         <DashboardCard
           title="Total Managers"
@@ -72,6 +73,7 @@ const AdminDashboard = () => {
           color="#0ea5e9"
           bg="#f0f9ff"
           subtitle="Department leads"
+          to="/admin/managers"
         />
         <DashboardCard
           title="Total Departments"
@@ -80,6 +82,7 @@ const AdminDashboard = () => {
           color="#8b5cf6"
           bg="#f5f3ff"
           subtitle="Operational units"
+          to="/admin/departments"
         />
         <DashboardCard
           title="Present Today"
@@ -88,6 +91,7 @@ const AdminDashboard = () => {
           color="#10b981"
           bg="#ecfdf5"
           subtitle="Logged in"
+          to="/admin/attendance"
         />
         <DashboardCard
           title="Absent Today"
@@ -96,6 +100,7 @@ const AdminDashboard = () => {
           color="#ef4444"
           bg="#fef2f2"
           subtitle="Not logged in"
+          to="/admin/attendance"
         />
         <DashboardCard
           title="Pending Leaves"
@@ -104,6 +109,7 @@ const AdminDashboard = () => {
           color="#f59e0b"
           bg="#fffbeb"
           subtitle="Awaiting action"
+          to="/admin/leaves"
         />
         <DashboardCard
           title="Active Projects"
@@ -112,6 +118,7 @@ const AdminDashboard = () => {
           color="#ec4899"
           bg="#fdf2f8"
           subtitle="Underway"
+          to="/admin/projects"
         />
       </div>
 
