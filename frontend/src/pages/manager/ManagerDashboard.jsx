@@ -602,7 +602,10 @@ const ManagerDashboard = () => {
       <FaceVerificationModal
         isOpen={faceModalOpen}
         onClose={() => setFaceModalOpen(false)}
+        onSuccess={handleFaceCheckInSuccess}
         onVerified={handleFaceCheckInSuccess}
+        employeeName={user?.name}
+        employeePhoto={user?.avatar}
       />
     </div>
   );

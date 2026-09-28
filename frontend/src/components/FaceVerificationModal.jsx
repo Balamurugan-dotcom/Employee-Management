@@ -5,7 +5,7 @@ import { detectFaceInCanvas } from '../utils/faceDetection';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, employeePhoto }) => {
+const FaceVerificationModal = ({ isOpen, onClose, onSuccess, onVerified, employeeName, employeePhoto }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -258,23 +258,33 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
       setTimeout(() => {
         triggerCompletion(snapshot, curLoc, faceCheck.confidence || 90);
       }, 700);
-    } else if (curStatus === 'unauthorized') {
+    } else {
       setIsSubmitting(false);
     }
   };
 
-  const triggerCompletion = (snapshot, loc, confidence = 90) => {
+  const triggerCompletion = async (snapshot, loc, confidence = 90) => {
+    setIsSubmitting(true);
     stopCamera();
-    if (onSuccess) {
-      onSuccess({
-        faceVerified: true,
-        faceConfidence: confidence,
-        faceImage: snapshot,
-        latitude: loc?.latitude,
-        longitude: loc?.longitude,
-        distance: loc?.distance,
-        officeName: loc?.officeName,
-      });
+    try {
+      const callback = onSuccess || onVerified;
+      if (callback) {
+        await callback({
+          faceVerified: true,
+          faceConfidence: confidence,
+          faceImage: snapshot,
+          latitude: loc?.latitude,
+          longitude: loc?.longitude,
+          distance: loc?.distance,
+          officeName: loc?.officeName,
+        });
+      }
+      if (onClose) {
+        onClose();
+      }
+    } catch (err) {
+      console.error('Check-in submission failed:', err);
+      setIsSubmitting(false);
     }
   };
 
