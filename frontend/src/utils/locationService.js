@@ -20,7 +20,9 @@ export const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
 export const getDeviceCoordinates = () => {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      return reject(new Error('Geolocation is not supported by your current browser or device.'));
+      const err = new Error('Location access is required. Please enable your location to continue.');
+      err.code = 'UNSUPPORTED';
+      return reject(err);
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -32,15 +34,9 @@ export const getDeviceCoordinates = () => {
         });
       },
       (error) => {
-        let msg = 'Failed to retrieve location.';
-        if (error.code === error.PERMISSION_DENIED) {
-          msg = 'Location access permission was denied. Please enable GPS / location permissions in your browser to record attendance.';
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = 'Location information is currently unavailable on your device. Please ensure GPS is enabled.';
-        } else if (error.code === error.TIMEOUT) {
-          msg = 'Location acquisition timed out. Please check your network and GPS signal.';
-        }
-        reject(new Error(msg));
+        const err = new Error('Location access is required. Please enable your location to continue.');
+        err.code = error.code === error.PERMISSION_DENIED ? 'PERMISSION_DENIED' : 'UNAVAILABLE';
+        reject(err);
       },
       {
         enableHighAccuracy: true,
@@ -83,7 +79,7 @@ export const fetchAuthorizedOfficeLocation = async () => {
 
 /**
  * Verifies employee's current physical location against authorized office geofence.
- * Returns { success: boolean, message?: string, latitude?: number, longitude?: number, distance?: number, officeName?: string, officeLocation?: object }
+ * Returns { success: boolean, message?: string, code?: string, latitude?: number, longitude?: number, distance?: number, officeName?: string, officeLocation?: object }
  */
 export const verifyAttendanceLocation = async () => {
   const { officeLocation, allowRemotePunch } = await fetchAuthorizedOfficeLocation();
@@ -123,7 +119,8 @@ export const verifyAttendanceLocation = async () => {
   } catch (err) {
     return {
       success: false,
-      message: err.message || 'Location permission required to verify workplace attendance.',
+      code: 'PERMISSION_DENIED',
+      message: 'Location access is required. Please enable your location to continue.',
       officeName: officeLocation?.name,
       officeLocation,
     };
@@ -141,7 +138,8 @@ export const verifyAttendanceLocation = async () => {
   if (distance > allowedRadius) {
     return {
       success: false,
-      message: `Location Unauthorized: You are ${distance}m away from the authorized office location (${officeLocation.name}). Attendance actions are only permitted within ${allowedRadius}m.`,
+      code: 'LOCATION_OUTSIDE',
+      message: 'Access denied. You are currently outside the authorized office location.',
       distance,
       allowedRadius,
       officeName: officeLocation.name,

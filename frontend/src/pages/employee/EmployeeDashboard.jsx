@@ -72,7 +72,10 @@ const EmployeeDashboard = () => {
     } catch (err) {
       console.warn('Failed to load workplace location:', err);
       setLocationStatus('denied');
-      setDeniedDetails({ message: err.message || 'Failed to verify GPS workplace location.' });
+      setDeniedDetails({
+        code: 'PERMISSION_DENIED',
+        message: 'Location access is required. Please enable your location to continue.',
+      });
     } finally {
       setCheckingOfficeLoc(false);
     }
@@ -335,12 +338,13 @@ const EmployeeDashboard = () => {
           </span>
 
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1e293b', marginTop: '12px', marginBottom: '8px' }}>
-            Access Denied: Outside Authorized Office
+            {deniedDetails?.code === 'PERMISSION_DENIED' || deniedDetails?.message?.includes('Location access is required')
+              ? 'Location Access Required'
+              : 'Access Denied: Outside Authorized Office'}
           </h1>
 
           <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, marginBottom: '22px' }}>
-            {deniedDetails?.message ||
-              'Access to the Employee Dashboard is denied because you are not physically present within the permitted workplace geofence.'}
+            {deniedDetails?.message || 'Access denied. You are currently outside the authorized office location.'}
           </p>
 
           {/* Location Telemetry Box */}

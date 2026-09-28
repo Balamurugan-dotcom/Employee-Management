@@ -16,9 +16,11 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
+// Public endpoint for geofence verification during employee login
+router.get('/office-location', getOfficeLocation);
+
 router.use(protect);
 
-router.get('/office-location', getOfficeLocation);
 router.put('/office-location', authorize('admin'), updateOfficeLocation);
 
 router.post('/checkin', checkIn);

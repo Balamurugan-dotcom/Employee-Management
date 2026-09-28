@@ -21,12 +21,30 @@ const generateToken = (user) => {
   );
 };
 
+const Setting = require('../models/Setting');
+
+// Haversine formula to calculate distance in meters between two lat/lng points
+const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+};
+
 // @desc    Login user (Email or Employee ID)
 // @route   POST /api/auth/login
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, password, latitude, longitude, locationError } = req.body;
 
     if (!identifier || !password) {
       return res.status(400).json({
@@ -79,6 +97,60 @@ const login = async (req, res) => {
         success: false,
         message: 'Your account has been deactivated. Please contact an Administrator.',
       });
+    }
+
+    // Strict location verification for employee accounts before allowing login
+    if (user.role === 'employee') {
+      let setting = await Setting.findOne();
+      const officeLocation = setting?.officeLocation || {
+        name: 'Main Office Headquarters',
+        latitude: 12.9716,
+        longitude: 77.5946,
+        radiusMeters: 500,
+        enforceLocation: true,
+      };
+      const allowRemotePunch = Boolean(setting?.allowRemotePunch);
+
+      if (!allowRemotePunch && officeLocation.enforceLocation !== false) {
+        // If location permission disabled/denied or coordinates missing
+        if (
+          locationError ||
+          latitude === undefined ||
+          latitude === null ||
+          longitude === undefined ||
+          longitude === null
+        ) {
+          return res.status(403).json({
+            success: false,
+            code: 'LOCATION_REQUIRED',
+            message: 'Location access is required. Please enable your location to continue.',
+          });
+        }
+
+        const userLat = Number(latitude);
+        const userLon = Number(longitude);
+        const distance = calculateDistanceMeters(
+          userLat,
+          userLon,
+          officeLocation.latitude,
+          officeLocation.longitude
+        );
+        const allowedRadius = officeLocation.radiusMeters || 500;
+
+        // If employee is outside the authorized office location
+        if (distance > allowedRadius) {
+          return res.status(403).json({
+            success: false,
+            code: 'LOCATION_OUTSIDE',
+            message: 'Access denied. You are currently outside the authorized office location.',
+            distance,
+            allowedRadius,
+            officeName: officeLocation.name,
+            latitude: userLat,
+            longitude: userLon,
+          });
+        }
+      }
     }
 
     // Fetch associated employee record if any

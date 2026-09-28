@@ -55,10 +55,16 @@ export const AuthProvider = ({ children }) => {
     verifyUser();
   }, []);
 
-  const login = async (identifier, password, rememberMe = false) => {
+  const login = async (identifier, password, rememberMe = false, locationData = null) => {
     setError(null);
     try {
-      const res = await api.post('/auth/login', { identifier, password });
+      const payload = { identifier, password };
+      if (locationData) {
+        if (locationData.latitude !== undefined) payload.latitude = locationData.latitude;
+        if (locationData.longitude !== undefined) payload.longitude = locationData.longitude;
+        if (locationData.locationError) payload.locationError = locationData.locationError;
+      }
+      const res = await api.post('/auth/login', payload);
       if (res.data.success) {
         const { token: receivedToken, user: receivedUser } = res.data;
         setToken(receivedToken);
@@ -83,8 +89,10 @@ export const AuthProvider = ({ children }) => {
       return { success: false, message: res.data.message || 'Login failed' };
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Authentication failed. Please try again.';
+      const code = err.response?.data?.code || null;
+      const data = err.response?.data || null;
       setError(msg);
-      return { success: false, message: msg };
+      return { success: false, message: msg, code, data };
     }
   };
 
