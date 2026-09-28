@@ -161,14 +161,6 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
           </form>
         )}
 
-        {/* Live System Health Badge (Hidden for Employee Portal) */}
-        {!isEmployee && (
-          <div className="system-status-pill" title="MERN Backend & MongoDB Connected">
-            <span className="status-dot-pulse"></span>
-            <span>Cloud Active</span>
-          </div>
-        )}
-
         {/* Notifications Dropdown (Hidden only in Employee Portal) */}
         {!isEmployee && (
           <div className="notif-wrapper" ref={notifRef}>
