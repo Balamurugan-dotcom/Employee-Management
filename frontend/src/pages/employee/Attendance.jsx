@@ -17,6 +17,8 @@ import {
   X,
   MapPin,
   RefreshCw,
+  TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import FaceVerificationModal from '../../components/FaceVerificationModal';
 import { verifyAttendanceLocation } from '../../utils/locationService';
