@@ -15,7 +15,7 @@ const api = axios.create({
 // Interceptor to attach Bearer token to all outgoing requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('ems_token');
+    const token = sessionStorage.getItem('ems_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,6 +31,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // Clear token and redirect to login if unauthorized and not already on login
       if (window.location.pathname !== '/login') {
+        sessionStorage.removeItem('ems_token');
+        sessionStorage.removeItem('ems_user');
         localStorage.removeItem('ems_token');
         localStorage.removeItem('ems_user');
         window.location.href = '/login';

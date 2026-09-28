@@ -195,8 +195,17 @@ const Login = () => {
   const handleResetPassword = async (e) => {
     if (e) e.preventDefault();
 
-    if (!newPassword || newPassword.length < 6) {
-      setForgotStatus({ success: false, message: 'Password must be at least 6 characters long.' });
+    const hasMinLen = newPassword.length >= 8;
+    const hasUpper = /[A-Z]/.test(newPassword);
+    const hasLower = /[a-z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword);
+
+    if (!hasMinLen || !hasUpper || !hasLower || !hasNumber || !hasSymbol) {
+      setForgotStatus({
+        success: false,
+        message: 'Password must have at least 8 characters and include uppercase, lowercase, a number, and a special character (!@#$%^&*).',
+      });
       return;
     }
 
@@ -717,12 +726,12 @@ const Login = () => {
                       <input
                         type={showNewPassword ? 'text' : 'password'}
                         className="form-control"
-                        placeholder="At least 6 characters"
+                        placeholder="Min 8 characters (e.g. Secret@123)"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         autoFocus
                         required
-                        minLength={6}
+                        minLength={8}
                       />
                       <button
                         type="button"
@@ -732,6 +741,24 @@ const Login = () => {
                       >
                         {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginTop: '6px' }}>
+                      <span style={{ fontSize: '11px', color: newPassword.length >= 8 ? '#16a34a' : '#94a3b8' }}>
+                        {newPassword.length >= 8 ? '✓' : '•'} 8+ characters
+                      </span>
+                      <span style={{ fontSize: '11px', color: /[A-Z]/.test(newPassword) ? '#16a34a' : '#94a3b8' }}>
+                        {/[A-Z]/.test(newPassword) ? '✓' : '•'} Uppercase (A-Z)
+                      </span>
+                      <span style={{ fontSize: '11px', color: /[a-z]/.test(newPassword) ? '#16a34a' : '#94a3b8' }}>
+                        {/[a-z]/.test(newPassword) ? '✓' : '•'} Lowercase (a-z)
+                      </span>
+                      <span style={{ fontSize: '11px', color: /[0-9]/.test(newPassword) ? '#16a34a' : '#94a3b8' }}>
+                        {/[0-9]/.test(newPassword) ? '✓' : '•'} Number (0-9)
+                      </span>
+                      <span style={{ fontSize: '11px', color: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword) ? '#16a34a' : '#94a3b8' }}>
+                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword) ? '✓' : '•'} Special char (!@#$)
+                      </span>
                     </div>
                   </div>
 

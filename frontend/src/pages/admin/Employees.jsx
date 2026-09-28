@@ -155,6 +155,24 @@ const Employees = () => {
     setFormLoading(true);
     setModalError('');
 
+    // Validate password complexity if creating new employee or updating password
+    if (modalMode === 'create' || (modalMode === 'edit' && formData.password)) {
+      const pwd = formData.password.trim();
+      const hasLength = pwd.length >= 8;
+      const hasUpper = /[A-Z]/.test(pwd);
+      const hasLower = /[a-z]/.test(pwd);
+      const hasNumber = /[0-9]/.test(pwd);
+      const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(pwd);
+
+      if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSymbol) {
+        const msg = 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special symbol (e.g. Employee@123).';
+        setModalError(msg);
+        showNotify('danger', msg);
+        setFormLoading(false);
+        return;
+      }
+    }
+
     try {
       if (modalMode === 'create') {
         const res = await api.post('/employees', formData);
@@ -923,11 +941,11 @@ const Employees = () => {
                         <input
                           type={showPassword ? 'text' : 'password'}
                           className="form-control"
-                          placeholder="Min 6 characters (e.g. Secret@123)"
+                          placeholder="Min 8 characters (e.g. Employee@123)"
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                           required
-                          minLength={6}
+                          minLength={8}
                           style={{ paddingRight: '40px' }}
                         />
                         <button
@@ -951,7 +969,7 @@ const Employees = () => {
                         </button>
                       </div>
                       <small style={{ color: '#64748b', fontSize: '11px' }}>
-                        At least 6 characters for secure authentication.
+                        Must have 8+ characters with uppercase, lowercase, number, and special character.
                       </small>
                     </div>
                   ) : (
@@ -960,11 +978,14 @@ const Employees = () => {
                       <input
                         type="password"
                         className="form-control"
-                        placeholder="Leave blank to keep existing"
+                        placeholder="Min 8 chars (e.g. Employee@123)"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        minLength={6}
+                        minLength={8}
                       />
+                      <small style={{ color: '#64748b', fontSize: '11px' }}>
+                        Leave blank to keep current password.
+                      </small>
                     </div>
                   )}
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const Attendance = require('../models/Attendance');
 const bcrypt = require('bcryptjs');
+const { validatePassword } = require('../utils/passwordValidator');
 
 // @desc    Get all employees (Admin can see all, Manager can see their team or all depending on query)
 // @route   GET /api/employees
@@ -236,11 +237,13 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // 3. Verify Password requirement
-    if (!password || password.length < 6) {
+    // 3. Verify Password requirement & complexity
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Password is required and must be at least 6 characters long.',
+        message: passwordCheck.message,
+        errors: passwordCheck.errors,
       });
     }
 
@@ -358,7 +361,15 @@ const updateEmployee = async (req, res) => {
       if (updates.status) userUpdates.status = updates.status;
       if (updates.name) userUpdates.name = updates.name;
       if (updates.profileImage) userUpdates.avatar = updates.profileImage;
-      if (updates.password && updates.password.trim().length >= 6) {
+      if (updates.password) {
+        const passwordCheck = validatePassword(updates.password.trim());
+        if (!passwordCheck.isValid) {
+          return res.status(400).json({
+            success: false,
+            message: passwordCheck.message,
+            errors: passwordCheck.errors,
+          });
+        }
         const salt = await bcrypt.genSalt(10);
         userUpdates.password = await bcrypt.hash(updates.password.trim(), salt);
       }

@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Employee = require('../models/Employee');
 const Otp = require('../models/Otp');
 const { sendOtpEmail } = require('../utils/emailService');
+const { validatePassword } = require('../utils/passwordValidator');
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -433,10 +434,12 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    if (!newPassword || newPassword.length < 6) {
+    const passwordCheck = validatePassword(newPassword);
+    if (!passwordCheck.isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long.',
+        message: passwordCheck.message,
+        errors: passwordCheck.errors,
       });
     }
 

@@ -5,17 +5,25 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('ems_user');
+    // Clear any residual persistent authentication tokens from localStorage
+    try {
+      localStorage.removeItem('ems_token');
+      localStorage.removeItem('ems_user');
+    } catch (e) {
+      // Ignore storage errors
+    }
+
+    const savedUser = sessionStorage.getItem('ems_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('ems_token') || null);
+  const [token, setToken] = useState(() => sessionStorage.getItem('ems_token') || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Validate current session with backend on initial load
+    // Validate current tab session with backend on initial load
     const verifyUser = async () => {
-      const savedToken = localStorage.getItem('ems_token');
+      const savedToken = sessionStorage.getItem('ems_token');
       if (savedToken) {
         try {
           const res = await api.get('/auth/profile');
@@ -34,7 +42,7 @@ export const AuthProvider = ({ children }) => {
               designation: res.data.employee?.designation || '',
             };
             setUser(updatedUser);
-            localStorage.setItem('ems_user', JSON.stringify(updatedUser));
+            sessionStorage.setItem('ems_user', JSON.stringify(updatedUser));
           }
         } catch (err) {
           console.error('Session verification failed:', err);
@@ -55,8 +63,14 @@ export const AuthProvider = ({ children }) => {
         const { token: receivedToken, user: receivedUser } = res.data;
         setToken(receivedToken);
         setUser(receivedUser);
-        localStorage.setItem('ems_token', receivedToken);
-        localStorage.setItem('ems_user', JSON.stringify(receivedUser));
+
+        // Store session exclusively in sessionStorage so closing the tab ends the session
+        sessionStorage.setItem('ems_token', receivedToken);
+        sessionStorage.setItem('ems_user', JSON.stringify(receivedUser));
+
+        // Purge any persistent tokens from localStorage
+        localStorage.removeItem('ems_token');
+        localStorage.removeItem('ems_user');
 
         if (rememberMe) {
           localStorage.setItem('ems_remembered_identifier', identifier);
@@ -84,6 +98,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setToken(null);
+      // Clean up both sessionStorage and localStorage
+      sessionStorage.removeItem('ems_token');
+      sessionStorage.removeItem('ems_user');
       localStorage.removeItem('ems_token');
       localStorage.removeItem('ems_user');
     }
@@ -92,7 +109,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (newDetails) => {
     const updated = { ...user, ...newDetails };
     setUser(updated);
-    localStorage.setItem('ems_user', JSON.stringify(updated));
+    sessionStorage.setItem('ems_user', JSON.stringify(updated));
   };
 
   return (
