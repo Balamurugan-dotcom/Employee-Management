@@ -292,16 +292,18 @@ const ManagerDashboard = () => {
               Welcome to {userName}
             </h2>
 
-            <p style={{ fontSize: '13px', color: '#c7d2fe', margin: '4px 0 0 0' }}>
-              {hasCheckedOut
-                ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
-                : hasCheckedIn && todayAttendance?.checkIn
-                ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
-                : 'Log your arrival time accurately with verified photo & authorized workplace location'}
-              {hasCheckedOut && todayAttendance?.checkOut
-                ? ` • Clocked out at ${new Date(todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : ''}
-            </p>
+            {(hasCheckedIn || hasCheckedOut) && (
+              <p style={{ fontSize: '13px', color: '#c7d2fe', margin: '4px 0 0 0' }}>
+                {hasCheckedOut
+                  ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
+                  : hasCheckedIn && todayAttendance?.checkIn
+                  ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                  : ''}
+                {hasCheckedOut && todayAttendance?.checkOut
+                  ? ` • Clocked out at ${new Date(todayAttendance.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : ''}
+              </p>
+            )}
           </div>
         </div>
 

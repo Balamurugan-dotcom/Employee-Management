@@ -340,26 +340,28 @@ const EmployeeDashboard = () => {
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px' }}>
             Welcome to {userName}
           </h2>
-          <p style={{ fontSize: '13px', color: '#c7d2fe', marginTop: '4px' }}>
-            {hasCheckedOut
-              ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
-              : isOnLunch
-              ? 'Currently on Lunch Break 🍽️'
-              : isOnBreak
-              ? 'Currently on Short Break ☕'
-              : hasCheckedIn && todayAttendance?.checkIn
-              ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
-              : 'Log your arrival time accurately for payroll processing'}
-            {isOnBreak && todayAttendance?.breakIn
-              ? ` • Break started at ${new Date(todayAttendance.breakIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : ''}
-            {isOnLunch && todayAttendance?.lunchIn
-              ? ` • Lunch started at ${new Date(todayAttendance.lunchIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : ''}
-            {hasCheckedOut && todayAttendance?.workingHours
-              ? ` • Total: ${todayAttendance.workingHours} hrs worked`
-              : ''}
-          </p>
+          {(hasCheckedIn || hasCheckedOut || isOnBreak || isOnLunch) && (
+            <p style={{ fontSize: '13px', color: '#c7d2fe', marginTop: '4px' }}>
+              {hasCheckedOut
+                ? `Shift Finished for Today • Total: ${todayAttendance?.workingHours || 0} hrs worked`
+                : isOnLunch
+                ? 'Currently on Lunch Break 🍽️'
+                : isOnBreak
+                ? 'Currently on Short Break ☕'
+                : hasCheckedIn && todayAttendance?.checkIn
+                ? `Currently On Duty (Checked In at ${new Date(todayAttendance.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                : ''}
+              {isOnBreak && todayAttendance?.breakIn
+                ? ` • Break started at ${new Date(todayAttendance.breakIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : ''}
+              {isOnLunch && todayAttendance?.lunchIn
+                ? ` • Lunch started at ${new Date(todayAttendance.lunchIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : ''}
+              {hasCheckedOut && todayAttendance?.workingHours
+                ? ` • Total: ${todayAttendance.workingHours} hrs worked`
+                : ''}
+            </p>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
