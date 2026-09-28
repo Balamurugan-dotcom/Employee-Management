@@ -214,7 +214,16 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
         )}
 
         {/* User Mini Profile Badge */}
-        <div className="nav-user-capsule">
+        <div
+          className="nav-user-capsule"
+          onClick={() => {
+            if (user?.role === 'admin') navigate('/admin/profile');
+            else if (user?.role === 'manager') navigate('/manager/profile');
+            else navigate('/employee/profile');
+          }}
+          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
+          title="View Profile"
+        >
           {user?.avatar && !user.avatar.includes('dicebear.com') ? (
             <img
               src={user.avatar}

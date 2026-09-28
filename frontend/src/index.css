@@ -547,6 +547,12 @@ body {
   border-radius: var(--radius-full);
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.nav-user-capsule:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
 }
 
 .nav-user-img {

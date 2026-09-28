@@ -19,6 +19,7 @@ import AdminTasks from './pages/admin/AdminTasks';
 import AdminPayroll from './pages/admin/AdminPayroll';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminProfile from './pages/admin/AdminProfile';
 
 // Manager Pages
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -80,6 +81,7 @@ function App() {
               <Route path="/admin/payroll" element={<AdminPayroll />} />
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/profile" element={<AdminProfile />} />
             </Route>
           </Route>
 

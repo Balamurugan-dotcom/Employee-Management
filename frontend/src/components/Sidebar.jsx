@@ -47,6 +47,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { title: 'Payroll', path: '/admin/payroll', icon: CreditCard },
     { title: 'Reports', path: '/admin/reports', icon: BarChart3 },
     { title: 'Settings', path: '/admin/settings', icon: Settings },
+    { title: 'Profile', path: '/admin/profile', icon: User },
   ];
 
   const managerNav = [
@@ -129,7 +130,17 @@ const Sidebar = ({ isOpen, onClose }) => {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-mini-card">
+          <div
+            className="user-mini-card"
+            onClick={() => {
+              if (role === 'admin') navigate('/admin/profile');
+              else if (role === 'manager') navigate('/manager/profile');
+              else navigate('/employee/profile');
+              if (onClose) onClose();
+            }}
+            style={{ cursor: 'pointer' }}
+            title="View & Edit Profile"
+          >
             {user?.avatar ? (
               <img src={user.avatar} alt={user.name} />
             ) : (

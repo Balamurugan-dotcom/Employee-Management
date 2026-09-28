@@ -216,18 +216,24 @@ const getProfile = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { phone, address, gender, profileImage } = req.body;
+    const { name, phone, address, gender, profileImage } = req.body;
 
     const employee = await Employee.findOne({
       $or: [{ user: req.user._id }, { email: req.user.email }, { employeeId: req.user.employeeId }],
     });
 
     if (employee) {
+      if (name && name.trim()) employee.name = name.trim();
       if (phone !== undefined) employee.phone = phone;
       if (address !== undefined) employee.address = address;
       if (gender !== undefined) employee.gender = gender;
       if (profileImage !== undefined) employee.profileImage = profileImage;
       await employee.save();
+    }
+
+    if (name && name.trim()) {
+      req.user.name = name.trim();
+      await req.user.save();
     }
 
     if (phone !== undefined) {
