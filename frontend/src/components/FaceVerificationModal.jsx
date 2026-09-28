@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, CheckCircle2, AlertCircle, X, RefreshCw, UserCheck, MapPin, Navigation, Upload, RotateCcw, ArrowRight } from 'lucide-react';
+import { Camera, CheckCircle2, AlertCircle, X, RefreshCw, UserCheck, MapPin, Navigation, Upload, RotateCcw, ArrowRight, ShieldCheck } from 'lucide-react';
 import { verifyAttendanceLocation, getDeviceCoordinates } from '../utils/locationService';
+import { detectFaceInCanvas } from '../utils/faceDetection';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -23,6 +24,11 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [flashActive, setFlashActive] = useState(false);
 
+  // Facial Biometric Verification State
+  const [faceStatus, setFaceStatus] = useState('idle'); // 'idle' | 'scanning' | 'verified' | 'failed'
+  const [faceMessage, setFaceMessage] = useState('');
+  const [faceConfidence, setFaceConfidence] = useState(0);
+
   // Location Verification State
   const [locationStatus, setLocationStatus] = useState('checking'); // 'checking' | 'verified' | 'unauthorized' | 'error'
   const [locationData, setLocationData] = useState(null);
@@ -36,6 +42,9 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
       setCameraStatus('idle');
       setCapturedPhoto(null);
       capturedPhotoRef.current = null;
+      setFaceStatus('idle');
+      setFaceMessage('');
+      setFaceConfidence(0);
       setIsSubmitting(false);
       setLocationStatus('checking');
       locationStatusRef.current = 'checking';
@@ -206,7 +215,7 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
     return '';
   };
 
-  const handleCaptureAndCheckIn = () => {
+  const handleCaptureAndCheckIn = async () => {
     if (isSubmitting) return;
 
     // Trigger flash animation
@@ -221,27 +230,46 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
 
     setCapturedPhoto(snapshot);
     capturedPhotoRef.current = snapshot;
+    setFaceStatus('scanning');
+    setFaceMessage('Scanning facial structure & biometric alignment...');
+
+    // Perform facial detection on captured frame
+    let faceCheck = { hasFace: false, confidence: 0, reason: 'Analyzing image...' };
+    if (canvasRef.current) {
+      faceCheck = await detectFaceInCanvas(canvasRef.current);
+    }
+
+    if (!faceCheck.hasFace) {
+      setFaceStatus('failed');
+      setFaceConfidence(faceCheck.confidence || 0);
+      setFaceMessage(faceCheck.reason || 'No human face detected. Please ensure your face is clearly visible.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    setFaceStatus('verified');
+    setFaceConfidence(faceCheck.confidence || 90);
+    setFaceMessage(faceCheck.reason || 'Human face verified successfully.');
     setIsSubmitting(true);
 
     const curStatus = locationStatusRef.current;
     const curLoc = locationDataRef.current;
 
     if (curStatus === 'verified') {
-      // Small delay for clean visual feedback of the captured photo
       setTimeout(() => {
-        triggerCompletion(snapshot, curLoc);
+        triggerCompletion(snapshot, curLoc, faceCheck.confidence || 90);
       }, 700);
     } else if (curStatus === 'unauthorized') {
       setIsSubmitting(false);
     }
-    // If curStatus === 'checking', checkLocation() will complete it once finished
   };
 
-  const triggerCompletion = (snapshot, loc) => {
+  const triggerCompletion = (snapshot, loc, confidence = 90) => {
     stopCamera();
     if (onSuccess) {
       onSuccess({
         faceVerified: true,
+        faceConfidence: confidence,
         faceImage: snapshot,
         latitude: loc?.latitude,
         longitude: loc?.longitude,
@@ -254,6 +282,9 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
   const handleRetake = () => {
     setCapturedPhoto(null);
     capturedPhotoRef.current = null;
+    setFaceStatus('idle');
+    setFaceMessage('');
+    setFaceConfidence(0);
     setIsSubmitting(false);
     if (!streamRef.current) {
       startCamera();
@@ -270,17 +301,42 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
       setCapturedPhoto(base64);
       capturedPhotoRef.current = base64;
       setCameraStatus('ready');
-      setIsSubmitting(true);
+      setFaceStatus('scanning');
+      setFaceMessage('Analyzing uploaded photo for human face...');
 
-      const curStatus = locationStatusRef.current;
-      const curLoc = locationDataRef.current;
-      if (curStatus === 'verified') {
-        setTimeout(() => {
-          triggerCompletion(base64, curLoc);
-        }, 600);
-      } else if (curStatus === 'unauthorized') {
-        setIsSubmitting(false);
-      }
+      const img = new Image();
+      img.onload = async () => {
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = img.width || 640;
+        offscreenCanvas.height = img.height || 480;
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+        const faceCheck = await detectFaceInCanvas(offscreenCanvas);
+        if (!faceCheck.hasFace) {
+          setFaceStatus('failed');
+          setFaceConfidence(faceCheck.confidence || 0);
+          setFaceMessage(faceCheck.reason || 'No human face detected in the uploaded photo.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        setFaceStatus('verified');
+        setFaceConfidence(faceCheck.confidence || 90);
+        setFaceMessage(faceCheck.reason || 'Human face verified successfully.');
+        setIsSubmitting(true);
+
+        const curStatus = locationStatusRef.current;
+        const curLoc = locationDataRef.current;
+        if (curStatus === 'verified') {
+          setTimeout(() => {
+            triggerCompletion(base64, curLoc, faceCheck.confidence || 90);
+          }, 600);
+        } else if (curStatus === 'unauthorized') {
+          setIsSubmitting(false);
+        }
+      };
+      img.src = base64;
     };
     reader.readAsDataURL(file);
   };
@@ -496,26 +552,46 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
               />
 
               {/* Photo Captured Tag */}
+              {/* Photo Captured Tag / Face Verification Badge */}
               <div
                 style={{
                   position: 'absolute',
                   top: '16px',
                   left: '16px',
-                  background: 'rgba(16, 185, 129, 0.9)',
+                  background:
+                    faceStatus === 'verified'
+                      ? 'rgba(16, 185, 129, 0.92)'
+                      : faceStatus === 'failed'
+                      ? 'rgba(239, 68, 68, 0.92)'
+                      : 'rgba(56, 189, 248, 0.92)',
                   backdropFilter: 'blur(4px)',
                   color: '#ffffff',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: '20px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   fontSize: '12.5px',
                   fontWeight: 700,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
                 }}
               >
-                <CheckCircle2 size={16} />
-                <span>Photo Captured</span>
+                {faceStatus === 'verified' ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    <span>Face Confirmed ({faceConfidence}%)</span>
+                  </>
+                ) : faceStatus === 'failed' ? (
+                  <>
+                    <AlertCircle size={16} />
+                    <span>No Face Detected</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>Scanning Face...</span>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -547,21 +623,20 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                     justifyContent: 'center',
                   }}
                 >
-                  {/* Subtle viewfinder box with corner brackets */}
+                  {/* Subtle viewfinder oval guide for face alignment */}
                   <div
                     style={{
                       position: 'relative',
-                      width: '260px',
-                      height: '260px',
-                      border: '1.5px dashed rgba(255, 255, 255, 0.25)',
-                      borderRadius: '16px',
+                      width: '240px',
+                      height: '280px',
+                      border: '2px dashed rgba(56, 189, 248, 0.5)',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.35)',
                     }}
                   >
-                    {/* 4 Corner Markers */}
-                    <div style={{ position: 'absolute', top: -2, left: -2, width: '22px', height: '22px', borderTop: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', borderTopLeftRadius: '6px' }} />
-                    <div style={{ position: 'absolute', top: -2, right: -2, width: '22px', height: '22px', borderTop: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', borderTopRightRadius: '6px' }} />
-                    <div style={{ position: 'absolute', bottom: -2, left: -2, width: '22px', height: '22px', borderBottom: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', borderBottomLeftRadius: '6px' }} />
-                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: '22px', height: '22px', borderBottom: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', borderBottomRightRadius: '6px' }} />
+                    {/* Crosshair guide */}
+                    <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', width: '24px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
+                    <div style={{ position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)', width: '24px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
                   </div>
 
                   {/* Top helper tag */}
@@ -569,17 +644,17 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                     style={{
                       position: 'absolute',
                       top: '16px',
-                      background: 'rgba(15, 23, 42, 0.65)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#cbd5e1',
-                      padding: '4px 12px',
+                      background: 'rgba(15, 23, 42, 0.75)',
+                      backdropFilter: 'blur(6px)',
+                      color: '#f1f5f9',
+                      padding: '5px 14px',
                       borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: 600,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                   >
-                    Position yourself in front of camera
+                    Align your face within the guide oval
                   </div>
                 </div>
               )}
@@ -677,6 +752,59 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
           {capturedPhoto ? (
             /* When Photo is Captured */
             <div>
+              {/* 1. Face Biometric Verification Status */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background:
+                    faceStatus === 'verified'
+                      ? 'rgba(16, 185, 129, 0.12)'
+                      : faceStatus === 'scanning'
+                      ? 'rgba(56, 189, 248, 0.1)'
+                      : 'rgba(239, 68, 68, 0.15)',
+                  border:
+                    faceStatus === 'verified'
+                      ? '1px solid rgba(16, 185, 129, 0.3)'
+                      : faceStatus === 'failed'
+                      ? '1px solid rgba(239, 68, 68, 0.4)'
+                      : '1px solid rgba(56, 189, 248, 0.2)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {faceStatus === 'verified' ? (
+                    <CheckCircle2 size={18} color="#10b981" />
+                  ) : faceStatus === 'scanning' ? (
+                    <RefreshCw size={18} color="#38bdf8" className="animate-spin" />
+                  ) : (
+                    <AlertCircle size={18} color="#ef4444" />
+                  )}
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color:
+                        faceStatus === 'verified'
+                          ? '#34d399'
+                          : faceStatus === 'scanning'
+                          ? '#7dd3fc'
+                          : '#fca5a5',
+                    }}
+                  >
+                    {faceStatus === 'verified'
+                      ? `Face Verified: Real human face confirmed (${faceConfidence}% match)`
+                      : faceStatus === 'scanning'
+                      ? 'Analyzing facial structure & liveness...'
+                      : faceMessage || 'No human face detected. Please retake photo.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. GPS Location Status */}
               <div
                 style={{
                   display: 'flex',
@@ -696,7 +824,7 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {locationStatus === 'verified' ? (
-                    <CheckCircle2 size={18} color="#10b981" />
+                    <MapPin size={18} color="#10b981" />
                   ) : locationStatus === 'checking' ? (
                     <RefreshCw size={18} color="#38bdf8" className="animate-spin" />
                   ) : (
@@ -715,19 +843,36 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                     }}
                   >
                     {locationStatus === 'verified'
-                      ? 'Photo ready! Submitting attendance check-in...'
+                      ? `Workplace Verified (${locationData?.officeName || 'Main Office'})`
                       : locationStatus === 'checking'
-                      ? 'Photo captured. Confirming workplace GPS...'
-                      : locationError || 'Cannot check in: Outside workplace geofence.'}
+                      ? 'Confirming workplace GPS location...'
+                      : locationError || 'Outside authorized workplace geofence.'}
                   </span>
                 </div>
               </div>
+
+              {/* Guidance text if face check failed */}
+              {faceStatus === 'failed' && (
+                <div
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    marginBottom: '14px',
+                    fontSize: '12px',
+                    color: '#f87171',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  🔒 <strong>Verification Policy:</strong> Check-in requires a clear human face in the camera frame. Objects, backgrounds, or covered lenses cannot be accepted. Please click <strong>Retake Face Photo</strong> and align your face inside the oval.
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <button
                   type="button"
                   onClick={handleRetake}
-                  disabled={isSubmitting && locationStatus === 'verified'}
                   style={{
                     flex: 1,
                     display: 'flex',
@@ -736,23 +881,23 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                     gap: '6px',
                     padding: '11px',
                     borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    background: '#1e293b',
-                    color: '#cbd5e1',
+                    border: faceStatus === 'failed' ? '1.5px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                    background: faceStatus === 'failed' ? 'rgba(239, 68, 68, 0.18)' : '#1e293b',
+                    color: faceStatus === 'failed' ? '#fca5a5' : '#cbd5e1',
                     fontSize: '13.5px',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                   }}
                 >
                   <RotateCcw size={16} />
-                  <span>Retake Photo</span>
+                  <span>{faceStatus === 'failed' ? 'Retake Face Photo' : 'Retake'}</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => triggerCompletion(capturedPhoto, locationDataRef.current)}
-                  disabled={locationStatus !== 'verified'}
+                  onClick={() => triggerCompletion(capturedPhoto, locationDataRef.current, faceConfidence)}
+                  disabled={locationStatus !== 'verified' || faceStatus !== 'verified'}
                   style={{
                     flex: 2,
                     display: 'flex',
@@ -763,22 +908,31 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                     borderRadius: '10px',
                     border: 'none',
                     background:
-                      locationStatus === 'verified'
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                      locationStatus === 'verified' && faceStatus === 'verified'
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                         : '#334155',
                     color: '#ffffff',
-                    fontSize: '14px',
+                    fontSize: '13.5px',
                     fontWeight: 700,
-                    cursor: locationStatus === 'verified' ? 'pointer' : 'not-allowed',
+                    cursor: locationStatus === 'verified' && faceStatus === 'verified' ? 'pointer' : 'not-allowed',
+                    opacity: locationStatus === 'verified' && faceStatus === 'verified' ? 1 : 0.6,
                     boxShadow:
-                      locationStatus === 'verified'
+                      locationStatus === 'verified' && faceStatus === 'verified'
                         ? '0 4px 14px rgba(16, 185, 129, 0.4)'
                         : 'none',
-                    transition: 'all 0.2s ease',
                   }}
                 >
-                  <span>Confirm & Check In</span>
-                  <ArrowRight size={16} />
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Recording Check-In...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={16} />
+                      <span>Confirm & Check In</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

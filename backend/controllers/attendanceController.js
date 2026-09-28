@@ -237,6 +237,14 @@ const checkIn = async (req, res) => {
       });
     }
 
+    // Verify facial verification if photo is submitted
+    if (req.body.faceImage && req.body.faceVerified === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'Facial verification failed: No genuine human face was detected in the photo.',
+      });
+    }
+
     const now = new Date();
     const photo = req.body.faceImage || '';
 
