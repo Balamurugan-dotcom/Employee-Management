@@ -220,21 +220,20 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // 2. Verify Username uniqueness
-    if (!username || !username.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Username is required.',
-      });
+    // 2. Set and verify Username
+    let trimmedUsername = username?.trim().toLowerCase();
+    if (!trimmedUsername) {
+      trimmedUsername = trimmedEmpId.toLowerCase();
     }
-
-    const trimmedUsername = username.trim().toLowerCase();
     const existingUsername = await User.findOne({ username: trimmedUsername });
     if (existingUsername) {
-      return res.status(400).json({
-        success: false,
-        message: `Username '${username}' is already registered in the database. Please choose a different username.`,
-      });
+      if (username && username.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: `Username '${username}' is already registered in the database. Please choose a different username.`,
+        });
+      }
+      trimmedUsername = `${trimmedUsername}_${Math.floor(100 + Math.random() * 900)}`;
     }
 
     // 3. Verify Password requirement & complexity

@@ -524,21 +524,6 @@ const Employees = () => {
                     </small>
                   </div>
 
-                  <div className="form-group">
-                    <label>Username *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. john_doe"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().trim() })}
-                      required
-                      disabled={modalMode === 'edit'}
-                    />
-                    <small style={{ color: '#64748b', fontSize: '11px' }}>
-                      Unique login username (letters, numbers, underscores).
-                    </small>
-                  </div>
 
                   {modalMode === 'create' ? (
                     <div className="form-group">
