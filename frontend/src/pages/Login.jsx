@@ -84,116 +84,107 @@ const Login = () => {
     }
 
     setLoading(true);
+    const trimmedId = identifier.trim();
 
-    const isEmployeeAttempt =
-      selectedRole === 'employee' ||
-      /^EMP/i.test(identifier.trim()) ||
-      (!selectedRole && !identifier.toLowerCase().includes('admin') && !identifier.toLowerCase().includes('manager'));
+    // 1. Submit authentication without location first
+    const result = await login(trimmedId, password, rememberMe, null);
 
-    // Verify employee location before allowing access
-    setVerifyingLocation(true);
-    let locationData = null;
-    let locCheck = null;
-
-    try {
-      locCheck = await verifyAttendanceLocation();
-      if (locCheck.success) {
-        locationData = {
-          latitude: locCheck.latitude,
-          longitude: locCheck.longitude,
-        };
-      } else {
-        locationData = {
-          locationError: locCheck.code === 'PERMISSION_DENIED' ? 'PERMISSION_DENIED' : 'LOCATION_OUTSIDE',
-          latitude: locCheck.latitude,
-          longitude: locCheck.longitude,
-        };
-      }
-    } catch {
-      locationData = { locationError: 'PERMISSION_DENIED' };
-    }
-
-    // If an employee attempts to log in and location verification fails
-    if (isEmployeeAttempt && (!locCheck || !locCheck.success)) {
+    // If login succeeded (Admin, Manager, or location-exempt)
+    if (result.success) {
       setLoading(false);
-      setVerifyingLocation(false);
-
-      const isPermissionDenied =
-        !locCheck ||
-        locCheck.code === 'PERMISSION_DENIED' ||
-        locCheck.message?.includes('Location access is required') ||
-        locCheck.message?.toLowerCase().includes('permission');
-
-      const msg = isPermissionDenied
-        ? 'Location access is required. Please enable your location to continue.'
-        : 'Access denied. You are currently outside the authorized office location.';
-
-      setErrorMessage(msg);
-      setLoginNoticeModal({
-        open: true,
-        title: isPermissionDenied ? 'Location Access Required' : 'Access Denied: Outside Authorized Office',
-        subtitle: isPermissionDenied
-          ? 'Device location access was not granted by your browser.'
-          : 'Physical presence within the authorized office location is required to continue.',
-        reason: msg,
-        type: isPermissionDenied ? 'permission' : 'geofence',
-        locDetails: locCheck,
-      });
+      const loggedUser = result.user;
+      if (loggedUser.role === 'admin') {
+        // Admin: completely zero location verification
+        navigate('/admin/dashboard', { replace: true });
+      } else if (loggedUser.role === 'manager') {
+        // Manager: zero location verification
+        navigate('/manager/dashboard', { replace: true });
+      } else {
+        navigate('/employee/dashboard', { replace: true });
+      }
       return;
     }
 
-    // Call login with credentials and locationData
-    const result = await login(identifier, password, rememberMe, locationData);
+    // 2. If rejected because account is an Employee requiring location verification
+    if (result.code === 'LOCATION_REQUIRED') {
+      setVerifyingLocation(true);
+      let locCheck = null;
 
-    setLoading(false);
-    setVerifyingLocation(false);
-
-    if (result.success) {
-      const loggedUser = result.user;
-      if (loggedUser.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (loggedUser.role === 'manager') {
-        navigate('/manager/dashboard', { replace: true });
-      } else {
-        // Employee Role - location verification completed and allowed
-        navigate('/employee/dashboard', { replace: true });
+      try {
+        locCheck = await verifyAttendanceLocation();
+      } catch (err) {
+        locCheck = {
+          success: false,
+          code: 'PERMISSION_DENIED',
+          message: 'Location access is required. Please enable your location to continue.',
+        };
       }
-    } else {
-      // Backend rejected login
-      const failMsg = result.message || 'Login failed. Please check your credentials.';
-      const isLocReq =
-        result.code === 'LOCATION_REQUIRED' ||
-        failMsg.includes('Location access is required') ||
-        failMsg.toLowerCase().includes('location permission');
-      const isLocOutside =
-        result.code === 'LOCATION_OUTSIDE' ||
-        failMsg.includes('outside the authorized office location') ||
-        failMsg.toLowerCase().includes('outside the authorized');
 
-      const displayMsg = isLocReq
-        ? 'Location access is required. Please enable your location to continue.'
-        : isLocOutside
-        ? 'Access denied. You are currently outside the authorized office location.'
-        : failMsg;
+      setVerifyingLocation(false);
 
-      setErrorMessage(displayMsg);
-      setLoginNoticeModal({
-        open: true,
-        title: isLocReq
-          ? 'Location Access Required'
-          : isLocOutside
-          ? 'Access Denied: Outside Authorized Office'
-          : 'Login Unsuccessful',
-        subtitle: isLocReq
+      if (!locCheck || !locCheck.success) {
+        setLoading(false);
+        const isPermissionDenied =
+          !locCheck ||
+          locCheck.code === 'PERMISSION_DENIED' ||
+          locCheck.message?.includes('Location access is required') ||
+          locCheck.message?.toLowerCase().includes('permission');
+
+        const msg = isPermissionDenied
           ? 'Location access is required. Please enable your location to continue.'
-          : isLocOutside
-          ? 'Access denied. You are currently outside the authorized office location.'
-          : 'Account authentication failed.',
-        reason: displayMsg,
-        type: isLocReq ? 'permission' : isLocOutside ? 'geofence' : 'credentials',
-        locDetails: result.data || null,
+          : 'Access denied. You are currently outside the authorized office location.';
+
+        setErrorMessage(msg);
+        setLoginNoticeModal({
+          open: true,
+          title: isPermissionDenied ? 'Location Access Required' : 'Access Denied: Outside Authorized Office',
+          subtitle: isPermissionDenied
+            ? 'Device location access was not granted by your browser.'
+            : 'Physical presence within the authorized office location is required to continue.',
+          reason: msg,
+          type: isPermissionDenied ? 'permission' : 'geofence',
+          locDetails: locCheck,
+        });
+        return;
+      }
+
+      // Employee location is verified within authorized office -> re-attempt login with coords
+      const empResult = await login(trimmedId, password, rememberMe, {
+        latitude: locCheck.latitude,
+        longitude: locCheck.longitude,
       });
+
+      setLoading(false);
+
+      if (empResult.success) {
+        navigate('/employee/dashboard', { replace: true });
+      } else {
+        const failMsg = empResult.message || 'Login failed. Please check your credentials.';
+        setErrorMessage(failMsg);
+        setLoginNoticeModal({
+          open: true,
+          title: 'Access Denied',
+          subtitle: 'Authentication failed.',
+          reason: failMsg,
+          type: 'geofence',
+          locDetails: locCheck,
+        });
+      }
+      return;
     }
+
+    // 3. Any other login failure (invalid password, deactivated, etc.)
+    setLoading(false);
+    const failMsg = result.message || 'Login failed. Please check your credentials.';
+    setErrorMessage(failMsg);
+    setLoginNoticeModal({
+      open: true,
+      title: 'Login Unsuccessful',
+      subtitle: 'Account authentication failed.',
+      reason: failMsg,
+      type: 'credentials',
+      locDetails: null,
+    });
   };
 
   // Timer for OTP resend countdown
