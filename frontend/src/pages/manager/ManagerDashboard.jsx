@@ -19,10 +19,12 @@ import {
   Camera,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import FaceVerificationModal from '../../components/FaceVerificationModal';
 import { verifyAttendanceLocation } from '../../utils/locationService';
 
 const ManagerDashboard = () => {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
