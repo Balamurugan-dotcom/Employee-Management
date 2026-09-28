@@ -115,7 +115,7 @@ const DashboardCard = ({
       </div>
       {Icon && (
         <div className="card-icon-wrap">
-          <Icon size={24} />
+          <Icon size={20} />
         </div>
       )}
     </div>

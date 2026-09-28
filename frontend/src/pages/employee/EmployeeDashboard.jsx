@@ -450,15 +450,16 @@ const EmployeeDashboard = () => {
       <div
         className="table-card"
         style={{
-          padding: '24px 28px',
+          padding: '16px 22px',
           background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
           color: '#ffffff',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '20px',
-          marginBottom: '24px',
+          gap: '16px',
+          marginBottom: '18px',
+          borderRadius: '12px',
         }}
       >
         <div>
