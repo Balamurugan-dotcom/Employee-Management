@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, CheckCircle2, AlertCircle, X, RefreshCw, UserCheck, MapPin, Navigation, Upload, RotateCcw, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Camera, CheckCircle2, AlertCircle, X, RefreshCw, UserCheck, MapPin, Navigation, RotateCcw, ArrowRight, ShieldCheck } from 'lucide-react';
 import { verifyAttendanceLocation, getDeviceCoordinates } from '../utils/locationService';
 import { detectFaceInCanvas } from '../utils/faceDetection';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,6 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const locationDataRef = useRef(null);
   const locationStatusRef = useRef('checking');
@@ -289,56 +288,6 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
     if (!streamRef.current) {
       startCamera();
     }
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      setCapturedPhoto(base64);
-      capturedPhotoRef.current = base64;
-      setCameraStatus('ready');
-      setFaceStatus('scanning');
-      setFaceMessage('Analyzing uploaded photo for human face...');
-
-      const img = new Image();
-      img.onload = async () => {
-        const offscreenCanvas = document.createElement('canvas');
-        offscreenCanvas.width = img.width || 640;
-        offscreenCanvas.height = img.height || 480;
-        const ctx = offscreenCanvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
-        const faceCheck = await detectFaceInCanvas(offscreenCanvas);
-        if (!faceCheck.hasFace) {
-          setFaceStatus('failed');
-          setFaceConfidence(faceCheck.confidence || 0);
-          setFaceMessage(faceCheck.reason || 'No human face detected in the uploaded photo.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        setFaceStatus('verified');
-        setFaceConfidence(faceCheck.confidence || 90);
-        setFaceMessage(faceCheck.reason || 'Human face verified successfully.');
-        setIsSubmitting(true);
-
-        const curStatus = locationStatusRef.current;
-        const curLoc = locationDataRef.current;
-        if (curStatus === 'verified') {
-          setTimeout(() => {
-            triggerCompletion(base64, curLoc, faceCheck.confidence || 90);
-          }, 600);
-        } else if (curStatus === 'unauthorized') {
-          setIsSubmitting(false);
-        }
-      };
-      img.src = base64;
-    };
-    reader.readAsDataURL(file);
   };
 
   if (!isOpen) return null;
@@ -705,9 +654,9 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                   onClick={startCamera}
                   className="btn"
                   style={{
-                    background: '#334155',
+                    background: '#4f46e5',
                     color: '#f8fafc',
-                    padding: '8px 16px',
+                    padding: '8px 20px',
                     fontSize: '13px',
                     borderRadius: '8px',
                     display: 'flex',
@@ -717,31 +666,6 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                 >
                   <RefreshCw size={14} /> Retry Camera
                 </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="btn"
-                  style={{
-                    background: '#4f46e5',
-                    color: '#ffffff',
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Upload size={14} /> Upload Check-In Photo
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
               </div>
             </div>
           )}
@@ -983,41 +907,13 @@ const FaceVerificationModal = ({ isOpen, onClose, onSuccess, employeeName, emplo
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   marginTop: '12px',
                   fontSize: '12px',
                   color: '#94a3b8',
                 }}
               >
-                <span>Photo will be captured and saved with your check-in</span>
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#38bdf8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    padding: 0,
-                  }}
-                >
-                  <Upload size={13} />
-                  <span>Upload from file</span>
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
+                <span>Live camera photo will be captured and verified with your check-in</span>
               </div>
             </div>
           )}
