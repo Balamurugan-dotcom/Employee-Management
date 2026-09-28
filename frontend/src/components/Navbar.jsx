@@ -124,6 +124,8 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
       ? 'Quick search team members...'
       : 'Quick search my tasks...';
 
+  const isEmployee = user?.role === 'employee' || title === 'Employee Portal';
+
   return (
     <header className="navbar">
       <div className="navbar-left">
@@ -145,26 +147,30 @@ const Navbar = ({ onToggleSidebar, title, subtitle }) => {
       </div>
 
       <div className="navbar-right-tools">
-        {/* Global Quick Search Input */}
-        <form onSubmit={handleSearchSubmit} className="nav-search-bar">
-          <Search size={16} className="nav-search-icon" />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <span className="search-shortcut">⌘K</span>
-        </form>
+        {/* Global Quick Search Input (Hidden for Employee Portal) */}
+        {!isEmployee && (
+          <form onSubmit={handleSearchSubmit} className="nav-search-bar">
+            <Search size={16} className="nav-search-icon" />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <span className="search-shortcut">⌘K</span>
+          </form>
+        )}
 
-        {/* Live System Health Badge */}
-        <div className="system-status-pill" title="MERN Backend & MongoDB Connected">
-          <span className="status-dot-pulse"></span>
-          <span>Cloud Active</span>
-        </div>
+        {/* Live System Health Badge (Hidden for Employee Portal) */}
+        {!isEmployee && (
+          <div className="system-status-pill" title="MERN Backend & MongoDB Connected">
+            <span className="status-dot-pulse"></span>
+            <span>Cloud Active</span>
+          </div>
+        )}
 
         {/* Notifications Dropdown (Hidden only in Employee Portal) */}
-        {!(user?.role === 'employee' || title === 'Employee Portal') && (
+        {!isEmployee && (
           <div className="notif-wrapper" ref={notifRef}>
             <button
               type="button"
