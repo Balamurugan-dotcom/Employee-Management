@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from './BrandLogo';
 import {
@@ -26,6 +26,7 @@ import {
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
@@ -104,16 +105,25 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
           {currentNav.map((item) => {
             const Icon = item.icon;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/admin/dashboard' &&
+                item.path !== '/manager/dashboard' &&
+                item.path !== '/employee/dashboard' &&
+                location.pathname.startsWith(item.path));
             return (
-              <NavLink
+              <button
+                type="button"
                 key={item.path}
-                to={item.path}
-                onClick={onClose}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  navigate(item.path);
+                  if (onClose) onClose();
+                }}
+                className={`nav-item ${isActive ? 'active' : ''}`}
               >
                 <Icon className="icon" />
                 <span>{item.title}</span>
-              </NavLink>
+              </button>
             );
           })}
         </nav>
