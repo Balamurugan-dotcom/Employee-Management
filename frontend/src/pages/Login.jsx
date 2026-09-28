@@ -15,8 +15,8 @@ import {
   ShieldCheck,
   ArrowLeft,
   RefreshCw,
-  MapPin,
   MapPinOff,
+  X,
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import { verifyAttendanceLocation } from '../utils/locationService';
@@ -47,6 +47,14 @@ const Login = () => {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const [verifyingLocation, setVerifyingLocation] = useState(false);
+  const [loginNoticeModal, setLoginNoticeModal] = useState({
+    open: false,
+    title: '',
+    subtitle: '',
+    reason: '',
+    type: 'geofence', // 'geofence' | 'permission' | 'credentials' | 'error'
+    locDetails: null,
+  });
 
   const { login, logout, user } = useAuth();
   const navigate = useNavigate();
@@ -103,26 +111,56 @@ const Login = () => {
             await logout();
             setLoading(false);
             setVerifyingLocation(false);
+            const isPermission =
+              locCheck.message?.toLowerCase().includes('permission') ||
+              locCheck.message?.toLowerCase().includes('denied');
             const distInfo = locCheck.distance !== undefined
               ? ` (Current distance: ${locCheck.distance}m away; permitted: ${locCheck.allowedRadius}m).`
               : '';
-            setErrorMessage(
+            const fullMsg =
               locCheck.message ||
-              `Access Denied: You are outside the authorized office location (${locCheck.officeName || 'Main Office'})${distInfo} Access to Employee Dashboard is restricted to authorized workplace premises.`
-            );
+              `Access Denied: You are outside the authorized office location (${locCheck.officeName || 'Main Office'})${distInfo} Access to Employee Dashboard is restricted to authorized workplace premises.`;
+
+            setErrorMessage(fullMsg);
+            setLoginNoticeModal({
+              open: true,
+              title: isPermission ? 'Location Permission Required' : 'Access Denied: Outside Workplace Geofence',
+              subtitle: isPermission
+                ? 'Device GPS location access was not granted by your browser.'
+                : 'Physical presence within authorized company premises is required for employee login.',
+              reason: fullMsg,
+              type: isPermission ? 'permission' : 'geofence',
+              locDetails: locCheck,
+            });
           }
         } catch (locErr) {
           await logout();
           setLoading(false);
           setVerifyingLocation(false);
-          setErrorMessage(
-            locErr.message || 'Access Denied: Unable to verify your physical presence at the office.'
-          );
+          const errText = locErr.message || 'Access Denied: Unable to verify your physical presence at the office.';
+          setErrorMessage(errText);
+          setLoginNoticeModal({
+            open: true,
+            title: 'Workplace Geofence Alert: Access Denied',
+            subtitle: 'Failed to verify employee location.',
+            reason: errText,
+            type: 'permission',
+            locDetails: null,
+          });
         }
       }
     } else {
       setLoading(false);
-      setErrorMessage(result.message || 'Login failed. Please check your credentials.');
+      const failMsg = result.message || 'Login failed. Please check your credentials.';
+      setErrorMessage(failMsg);
+      setLoginNoticeModal({
+        open: true,
+        title: 'Login Unsuccessful',
+        subtitle: 'Account authentication failed.',
+        reason: failMsg,
+        type: 'credentials',
+        locDetails: null,
+      });
     }
   };
 
@@ -343,9 +381,27 @@ const Login = () => {
               )}
             </div>
             <div style={{ flex: 1, fontSize: '13px', lineHeight: 1.5 }}>
-              <strong style={{ display: 'block', fontSize: '13.5px', marginBottom: '2px', color: '#7f1d1d' }}>
-                {errorMessage.includes('Access Denied') ? 'Workplace Geofence Alert' : 'Authentication Notice'}
-              </strong>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                <strong style={{ fontSize: '13.5px', color: '#7f1d1d' }}>
+                  {errorMessage.includes('Access Denied') ? 'Workplace Geofence Restriction' : 'Authentication Notice'}
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => setLoginNoticeModal((prev) => ({ ...prev, open: true }))}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#dc2626',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    padding: '0 4px',
+                  }}
+                >
+                  View Full Notice ↗
+                </button>
+              </div>
               <span>{errorMessage}</span>
             </div>
           </div>
@@ -895,6 +951,175 @@ const Login = () => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* MODAL 2: WHY WAS LOGIN RESTRICTED / NOT LOGGING IN NOTIFICATION MODAL */}
+      {loginNoticeModal.open && (
+        <div className="modal-overlay" style={{ zIndex: 120 }}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '540px',
+              width: '100%',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #fee2e2',
+              animation: 'slideUp 0.25s ease-out',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              className="modal-header"
+              style={{
+                background: loginNoticeModal.type === 'geofence' ? '#fef2f2' : '#f8fafc',
+                borderBottom: '1px solid #e2e8f0',
+                padding: '18px 24px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: loginNoticeModal.type === 'geofence' ? '#fee2e2' : '#f1f5f9',
+                    color: loginNoticeModal.type === 'geofence' ? '#dc2626' : '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {loginNoticeModal.type === 'geofence' ? (
+                    <MapPinOff size={20} />
+                  ) : loginNoticeModal.type === 'permission' ? (
+                    <AlertCircle size={20} color="#f59e0b" />
+                  ) : (
+                    <Lock size={20} />
+                  )}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    {loginNoticeModal.title}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                    {loginNoticeModal.subtitle}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLoginNoticeModal((prev) => ({ ...prev, open: false }))}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <div
+                style={{
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  borderRadius: '10px',
+                  padding: '14px 16px',
+                  marginBottom: '20px',
+                }}
+              >
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, color: '#be123c', display: 'block', marginBottom: '4px' }}>
+                  Root Cause Diagnosis
+                </span>
+                <p style={{ fontSize: '13px', color: '#881337', margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
+                  {loginNoticeModal.reason}
+                </p>
+              </div>
+
+              {/* Location Telemetry Breakdown if Geofence or Permission */}
+              {loginNoticeModal.type === 'geofence' && loginNoticeModal.locDetails && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    fontSize: '12.5px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', display: 'block', marginBottom: '10px' }}>
+                    Live GPS Telemetry vs Office Geofence
+                  </span>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b' }}>Designated Workplace:</span>
+                    <strong style={{ color: '#0f172a' }}>{loginNoticeModal.locDetails.officeName || 'Main Office'}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b' }}>Permitted Geofence Radius:</span>
+                    <strong style={{ color: '#16a34a' }}>Within {loginNoticeModal.locDetails.allowedRadius || 750} meters</strong>
+                  </div>
+
+                  {loginNoticeModal.locDetails.distance !== undefined && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <span style={{ color: '#64748b' }}>Your Detected Distance:</span>
+                      <strong style={{ color: '#dc2626' }}>
+                        {loginNoticeModal.locDetails.distance > 1000
+                          ? `${(loginNoticeModal.locDetails.distance / 1000).toFixed(2)} km away`
+                          : `${loginNoticeModal.locDetails.distance} meters away`}
+                      </strong>
+                    </div>
+                  )}
+
+                  {loginNoticeModal.locDetails.latitude && loginNoticeModal.locDetails.longitude && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                      <span style={{ color: '#64748b' }}>Your Device Coordinates:</span>
+                      <span style={{ fontFamily: 'monospace', color: '#475569' }}>
+                        {loginNoticeModal.locDetails.latitude.toFixed(5)}, {loginNoticeModal.locDetails.longitude.toFixed(5)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Troubleshooting Guidance */}
+              <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, background: '#f8fafc', padding: '14px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <strong style={{ display: 'block', color: '#1e293b', marginBottom: '6px' }}>How to resolve:</strong>
+                <ul style={{ paddingLeft: '18px', margin: 0 }}>
+                  <li style={{ marginBottom: '4px' }}>
+                    <strong>On-site employee:</strong> Enable high-accuracy location in your device settings and allow browser location access in the URL bar (click the 📍 or 🔒 lock icon).
+                  </li>
+                  <li>
+                    <strong>Administrator / Testing:</strong> Log in using the <strong>Admin</strong> account to adjust the office coordinates or perimeter radius in <em>Settings → Workplace Geofence</em>.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="modal-footer" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '13px', padding: '8px 16px' }}
+                onClick={() => {
+                  setLoginNoticeModal((prev) => ({ ...prev, open: false }));
+                  handleQuickFill('admin');
+                }}
+              >
+                Switch to Admin Account
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ fontSize: '13px', padding: '8px 20px' }}
+                onClick={() => setLoginNoticeModal((prev) => ({ ...prev, open: false }))}
+              >
+                Dismiss Notice
+              </button>
+            </div>
           </div>
         </div>
       )}

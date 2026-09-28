@@ -15,9 +15,7 @@ import {
   Bell,
   ArrowRight,
   X,
-  MapPin,
   MapPinOff,
-  ShieldAlert,
   RefreshCw,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
