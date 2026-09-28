@@ -14,40 +14,22 @@ const app = express();
 
 const { apiLimiter } = require('./middleware/rateLimiter');
 
-// Allowed Origins for CORS
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-].filter(Boolean);
-
 // Security Headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  // Clear any HSTS on local HTTP connections so browser doesn't force HTTPS on localhost
+  if (!req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=0');
+  } else {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
-// Middlewares
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like curl, postman, mobile apps)
-      if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.some((allowed) => origin === allowed || origin.startsWith(allowed));
-      if (isAllowed || process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      return callback(new Error('Blocked by CORS policy: Origin unauthorized.'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// Middlewares - Enable CORS
+app.use(cors());
 
 app.use(express.json({ limit: '10mb' }));
 if (process.env.NODE_ENV !== 'production') {
